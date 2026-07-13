@@ -5,13 +5,14 @@ import MovieMetaPanel from '@/app/(default)/xem-phim/[slug]/components/MovieMeta
 import ServerSelector from '@/app/(default)/xem-phim/[slug]/components/ServerSelector';
 import VideoPlayer from '@/app/(default)/xem-phim/[slug]/components/VideoPlayer';
 import type { WatchMovie } from '@/app/(default)/xem-phim/[slug]/types';
-import { MovieDetailResult, MovieListItem, getMovieThumb } from '@/lib/api/movie';
+import { MovieDetailResult, MovieListItem, PeoplesData, getMovieThumb } from '@/lib/api/movie';
 
 type WatchMovieTemplateProps = {
   slug: string;
   movieData: MovieDetailResult;
   topMovies: MovieListItem[];
   topMoviesCdnImage: string;
+  peoplesData?: PeoplesData | null;
   tap?: string;
   sv?: string;
 };
@@ -31,6 +32,7 @@ const WatchMovieTemplate = ({
   movieData,
   topMovies,
   topMoviesCdnImage,
+  peoplesData,
   tap,
   sv,
 }: WatchMovieTemplateProps) => {
@@ -47,6 +49,7 @@ const WatchMovieTemplate = ({
   }));
 
   const movie: WatchMovie = {
+    movieId: item._id,
     slug: item.slug,
     title: item.name,
     altTitle: item.origin_name,
@@ -74,20 +77,22 @@ const WatchMovieTemplate = ({
   const currentEpisodeData = activeServer?.episodes.find((ep) => ep.number === currentEpisode);
 
   return (
-    <div className="min-h-screen bg-[#191b24] pb-12 pt-5 lg:pt-30">
-      <div className="mx-auto w-full max-w-[1640px] px-5">
+    <div className="min-h-screen bg-[#f0f3f8] dark:bg-[#191b24] pb-12 pt-5 lg:pt-30 transition-colors duration-300">
+      <div className="mx-auto w-full max-w-[1640px] px-5 3xl:max-w-[2200px] 4xl:max-w-[2800px]">
         <div className="grid gap-3 lg:gap-4">
           <VideoPlayer
             movieSlug={slug}
+            movieId={movie.movieId}
             movieTitle={movie.title}
             episode={currentEpisode}
             server={currentServer}
             embedUrl={currentEpisodeData?.linkEmbed || ''}
+            hasTapParam={tap !== undefined}
           />
 
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_450px] lg:gap-6">
             <div className="grid gap-4">
-              <MovieMetaPanel movie={movie} />
+              <MovieMetaPanel movie={movie} peoplesData={peoplesData} />
               <ServerSelector
                 slug={slug}
                 episode={currentEpisode}
@@ -96,15 +101,16 @@ const WatchMovieTemplate = ({
               />
               <EpisodeSelector
                 slug={slug}
+                movieId={movie.movieId}
                 currentEpisode={currentEpisode}
                 server={currentServer}
                 episodes={activeServer?.episodes ?? []}
                 sectionLabel={activeServer?.name || 'Danh sách tập'}
               />
-              <CommentSection />
+              <CommentSection slug={slug} />
             </div>
 
-            <div className="lg:border-l lg:border-white/5 lg:pl-6">
+            <div className="lg:border-l lg:border-gray-300 dark:lg:border-white/5 lg:pl-6">
               <CastSidebar
                 movie={movie}
                 suggestions={topMovies}

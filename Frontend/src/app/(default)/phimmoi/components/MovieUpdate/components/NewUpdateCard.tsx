@@ -2,8 +2,9 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import images from "@/assets/images";
+import MoviePoster from "@/components/MoviePoster";
 
-export type BadgeItem = { type: "pd" | "lt" | "tm"; text: string };
+export type BadgeItem = { type: "pd" | "lt" | "tm"; text: string; label?: string };
 
 const BADGE_LABEL: Record<BadgeItem["type"], string> = { pd: "PĐ.", tm: "TM.", lt: "LT." };
 const BADGE_BG: Record<BadgeItem["type"], string> = {
@@ -25,14 +26,13 @@ export const NewUpdateCard = ({ title, originName, slug, thumb, badges, priority
   return (
     <div className="group w-full">
       {/* Thumbnail */}
-      <div className="relative w-full rounded-[6px] overflow-hidden bg-[#25252b]" style={{ paddingTop: "135.74%" }}>
+      <div className="relative w-full rounded-[6px] overflow-hidden bg-gray-300 dark:bg-[#25252b]" style={{ paddingTop: "135.74%" }}>
         <Link href={`/phim/${slug}`} title={title} className="absolute inset-0 w-full h-full block overflow-hidden">
           
           {/* Ảnh */}
-          <Image
+          <MoviePoster
             src={thumb}
             alt={title}
-            fill
             sizes="(max-width: 640px) 33vw, (max-width: 1024px) 20vw, 12vw"
             quality={70}
             priority={priority}
@@ -71,7 +71,7 @@ export const NewUpdateCard = ({ title, originName, slug, thumb, badges, priority
                   className="flex items-center gap-1 px-2 py-[0.2rem] text-[11px] font-normal text-white"
                   style={{ backgroundColor: BADGE_BG[b.type] }}
                 >
-                  <span style={{ fontWeight: 200 }}>{BADGE_LABEL[b.type]}</span>
+                  <span style={{ fontWeight: 200 }}>{b.label !== undefined ? b.label : BADGE_LABEL[b.type]}</span>
                   <strong className="font-semibold" style={{ fontWeight: 200 }}>{b.text}</strong>
                 </div>
               ))}
@@ -80,8 +80,13 @@ export const NewUpdateCard = ({ title, originName, slug, thumb, badges, priority
 
           {/* Play button */}
           <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[9] opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <span className="w-[60px] h-[60px] rounded-full bg-[#fadfa3] text-[#2D1B0D] flex items-center justify-center text-[22px]">
-              ▶
+            <span
+              className="w-[60px] h-[60px] rounded-full flex items-center justify-center shrink-0 transition-transform duration-200 hover:scale-105"
+              style={{ background: 'linear-gradient(39deg, #fecf59, #fff1cc)', color: '#1a1a1a', boxShadow: '0 5px 10px 5px rgba(255, 218, 125, 0.1)' }}
+            >
+              <svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 384 512" height="22" width="22" xmlns="http://www.w3.org/2000/svg">
+                <path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80L0 432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z" />
+              </svg>
             </span>
           </span>
         </Link>
@@ -92,12 +97,12 @@ export const NewUpdateCard = ({ title, originName, slug, thumb, badges, priority
         <Link
           href={`/phim/${slug}`}
           title={title}
-          className="block text-white/90 font-normal leading-[26px] h-[26px] overflow-hidden text-ellipsis whitespace-nowrap text-sm hover:text-[#f472b6] transition-colors"
+          className="block text-gray-800 dark:text-white/90 font-normal leading-[26px] h-[26px] overflow-hidden text-ellipsis whitespace-nowrap text-sm hover:text-[#f472b6] transition-colors"
         >
           {title}
         </Link>
         {originName && (
-          <p className="text-white/40 text-[11px] leading-[18px] h-[18px] overflow-hidden text-ellipsis whitespace-nowrap m-0">
+          <p className="text-gray-500 dark:text-white/40 text-[11px] leading-[18px] h-[18px] overflow-hidden text-ellipsis whitespace-nowrap m-0">
             {originName}
           </p>
         )}

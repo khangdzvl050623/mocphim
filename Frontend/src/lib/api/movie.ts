@@ -1,6 +1,12 @@
 const API = process.env.NEXT_PUBLIC_API_URL!;
 const CDN = process.env.NEXT_PUBLIC_CDN_IMAGE!;
 
+function resolveTotalPages(totalPages: number, totalItems: number, pageSize: number): number {
+  if (totalPages > 1) return totalPages;
+  if (totalItems > pageSize) return Math.ceil(totalItems / pageSize);
+  return totalPages;
+}
+
 export function getMovieThumb(thumb_url: string, cdn = CDN): string {
   if (!thumb_url) return '';
   if (thumb_url.startsWith('http')) return thumb_url;
@@ -116,28 +122,41 @@ export interface MovieListItem {
   origin_name: string;
   type: string;
   thumb_url: string;
+  poster_url?: string;
   episode_current: string;
   quality: string;
   lang: string;
   year: number;
+  content?: string;
+  category?: { id: string; name: string; slug: string }[];
+  country?: { id: string; name: string; slug: string }[];
+  imdb?: { id: string; vote_average: number; vote_count: number };
+  tmdb?: { type: string; id: string; season: number; vote_average: number; vote_count: number };
 }
 
 // ─── API Functions ─────────────────────────────────────────────────────────────
 
 export async function fetchMovieDetail(slug: string): Promise<MovieDetailResult | null> {
-  try {
-    const res = await fetch(`${API}/movies/${slug}`, { next: { revalidate: 600 } });
-    if (!res.ok) return null;
-    const json = await res.json();
-    const inner = json?.data?.data;
-    if (!inner?.item) return null;
-    return {
-      item: inner.item,
-      cdnImage: inner.APP_DOMAIN_CDN_IMAGE || CDN,
-    };
-  } catch {
-    return null;
+  const url = `${API}/movies/${slug}`;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(url, { next: { revalidate: 600 } });
+      // 404 = phim không tồn tại, không retry
+      if (res.status === 404) return null;
+      if (!res.ok) {
+        if (attempt < 2) continue;
+        return null;
+      }
+      const json = await res.json();
+      const inner = json?.data?.data;
+      if (!inner?.item) return null;
+      return { item: inner.item, cdnImage: inner.APP_DOMAIN_CDN_IMAGE || CDN };
+    } catch {
+      if (attempt < 2) continue;
+      return null;
+    }
   }
+  return null;
 }
 
 export async function fetchMoviePeoples(slug: string): Promise<PeoplesData | null> {
@@ -201,13 +220,14 @@ export async function fetchMovieList(params: {
       : Array.isArray(topData)
       ? topData
       : [];
-    const totalItems = json?.pagination?.totalItems ?? inner?.params?.pagination?.totalItems ?? items.length;
-    const totalPages = json?.pagination?.totalPages ?? inner?.params?.pagination?.totalPages ?? 1;
+    const totalItems = json?.pagination?.totalItems ?? inner?.params?.pagination?.totalItems ?? topData?.params?.pagination?.totalItems ?? items.length;
+    const rawTotalPages = json?.pagination?.totalPages ?? inner?.params?.pagination?.totalPages ?? topData?.params?.pagination?.totalPages ?? 1;
+    const pageSize = Number(params.size ?? 20);
     return {
       items,
       cdnImage: inner?.APP_DOMAIN_CDN_IMAGE || topData?.APP_DOMAIN_CDN_IMAGE || CDN,
       totalItems,
-      totalPages,
+      totalPages: resolveTotalPages(rawTotalPages, totalItems, pageSize),
     };
   } catch {
     return null;
@@ -262,12 +282,17 @@ export async function fetchAllMovies(
     const res = await fetch(url.toString(), { next: { revalidate: 300 } });
     if (!res.ok) return null;
     const json = await res.json();
-    const inner = json?.data?.data;
+    const topData = json?.data;
+    const inner = topData?.data;
     return {
-      items: inner?.items ?? [],
-      cdnImage: inner?.APP_DOMAIN_CDN_IMAGE || CDN,
-      totalItems: json?.pagination?.totalItems ?? inner?.params?.pagination?.totalItems ?? 0,
-      totalPages: json?.pagination?.totalPages ?? inner?.params?.pagination?.totalPages ?? 1,
+      items: inner?.items ?? topData?.items ?? [],
+      cdnImage: inner?.APP_DOMAIN_CDN_IMAGE || topData?.APP_DOMAIN_CDN_IMAGE || CDN,
+      totalItems: json?.pagination?.totalItems ?? inner?.params?.pagination?.totalItems ?? topData?.params?.pagination?.totalItems ?? 0,
+      totalPages: resolveTotalPages(
+        json?.pagination?.totalPages ?? inner?.params?.pagination?.totalPages ?? topData?.params?.pagination?.totalPages ?? 1,
+        json?.pagination?.totalItems ?? inner?.params?.pagination?.totalItems ?? topData?.params?.pagination?.totalItems ?? 0,
+        Number(params.size ?? 20),
+      ),
     };
   } catch {
     return null;
@@ -299,8 +324,12 @@ export async function fetchCategoryMovies(
     return {
       items,
       cdnImage: inner?.APP_DOMAIN_CDN_IMAGE || topData?.APP_DOMAIN_CDN_IMAGE || CDN,
-      totalItems: json?.pagination?.totalItems ?? inner?.params?.pagination?.totalItems ?? 0,
-      totalPages: json?.pagination?.totalPages ?? inner?.params?.pagination?.totalPages ?? 1,
+      totalItems: json?.pagination?.totalItems ?? inner?.params?.pagination?.totalItems ?? topData?.params?.pagination?.totalItems ?? 0,
+      totalPages: resolveTotalPages(
+        json?.pagination?.totalPages ?? inner?.params?.pagination?.totalPages ?? topData?.params?.pagination?.totalPages ?? 1,
+        json?.pagination?.totalItems ?? inner?.params?.pagination?.totalItems ?? topData?.params?.pagination?.totalItems ?? 0,
+        Number(params.size ?? 20),
+      ),
     };
   } catch {
     return null;
@@ -320,7 +349,7 @@ export async function fetchCountries(): Promise<{ id: string; name: string; slug
 
 export async function fetchCountryMovies(
   slug: string,
-  params: { page?: number; size?: number; sort_field?: string; sort_type?: string } = {}
+  params: { page?: number; size?: number; sort_field?: string; sort_type?: string; year?: number } = {}
 ): Promise<{ items: MovieListItem[]; cdnImage: string; totalItems: number; totalPages: number } | null> {
   try {
     const url = new URL(`${API}/countries/${slug}/movies`);
@@ -328,6 +357,7 @@ export async function fetchCountryMovies(
     if (params.size) url.searchParams.set('size', String(params.size));
     if (params.sort_field) url.searchParams.set('sort_field', params.sort_field);
     if (params.sort_type) url.searchParams.set('sort_type', params.sort_type);
+    if (params.year) url.searchParams.set('year', String(params.year));
     const res = await fetch(url.toString(), { next: { revalidate: 300 } });
     if (!res.ok) return null;
     const json = await res.json();
@@ -343,8 +373,12 @@ export async function fetchCountryMovies(
     return {
       items,
       cdnImage: inner?.APP_DOMAIN_CDN_IMAGE || topData?.APP_DOMAIN_CDN_IMAGE || CDN,
-      totalItems: json?.pagination?.totalItems ?? inner?.params?.pagination?.totalItems ?? 0,
-      totalPages: json?.pagination?.totalPages ?? inner?.params?.pagination?.totalPages ?? 1,
+      totalItems: json?.pagination?.totalItems ?? inner?.params?.pagination?.totalItems ?? topData?.params?.pagination?.totalItems ?? 0,
+      totalPages: resolveTotalPages(
+        json?.pagination?.totalPages ?? inner?.params?.pagination?.totalPages ?? topData?.params?.pagination?.totalPages ?? 1,
+        json?.pagination?.totalItems ?? inner?.params?.pagination?.totalItems ?? topData?.params?.pagination?.totalItems ?? 0,
+        Number(params.size ?? 20),
+      ),
     };
   } catch {
     return null;
@@ -387,8 +421,12 @@ export async function fetchYearMovies(
     return {
       items,
       cdnImage: inner?.APP_DOMAIN_CDN_IMAGE || topData?.APP_DOMAIN_CDN_IMAGE || CDN,
-      totalItems: json?.pagination?.totalItems ?? inner?.params?.pagination?.totalItems ?? 0,
-      totalPages: json?.pagination?.totalPages ?? inner?.params?.pagination?.totalPages ?? 1,
+      totalItems: json?.pagination?.totalItems ?? inner?.params?.pagination?.totalItems ?? topData?.params?.pagination?.totalItems ?? 0,
+      totalPages: resolveTotalPages(
+        json?.pagination?.totalPages ?? inner?.params?.pagination?.totalPages ?? topData?.params?.pagination?.totalPages ?? 1,
+        json?.pagination?.totalItems ?? inner?.params?.pagination?.totalItems ?? topData?.params?.pagination?.totalItems ?? 0,
+        Number(params.size ?? 20),
+      ),
     };
   } catch {
     return null;

@@ -82,7 +82,7 @@ const Navigation = () => {
 
   useEffect(() => {
     fetchCategories().then((data) => {
-      setCategories(data);
+      setCategories(data.filter((cat) => cat.slug !== 'phim-18'));
       setCatLoading(false);
     });
     fetchCountries().then((data) => {
@@ -114,13 +114,13 @@ const Navigation = () => {
       <DropdownMenu label="Thể loại" items={categories} basePath="the-loai" loading={catLoading} />
       <DropdownMenu label="Năm phát hành" items={years} basePath="nam-phat-hanh" loading={yearLoading} />
 
-      <Link href="/phim-le" className="hover:text-gray-300 transition-colors capitalize">Phim Lẻ</Link>
-      <Link href="/phim-bo" className="hover:text-gray-300 transition-colors capitalize">Phim Bộ</Link>
+      <Link href="/phim-le" className="text-white no-underline hover:text-gray-300 transition-colors capitalize">Phim Lẻ</Link>
+      <Link href="/phim-bo" className="text-white no-underline hover:text-gray-300 transition-colors capitalize">Phim Bộ</Link>
 
       <DropdownMenu label="Quốc gia" items={countries} basePath="quoc-gia" loading={cntLoading} />
 
-      {/* <Link href="/dien-vien" className="hover:text-gray-300 transition-colors capitalize">Diễn Viên</Link>
-      <Link href="/lich-chieu" className="hover:text-gray-300 transition-colors capitalize">Lịch Chiếu</Link> */}
+      <Link href="/dien-vien" className="text-white no-underline hover:text-gray-300 transition-colors capitalize">Diễn Viên</Link>
+      {/* <Link href="/lich-chieu" className="hover:text-gray-300 transition-colors capitalize">Lịch Chiếu</Link> */}
     </nav>
   );
 };

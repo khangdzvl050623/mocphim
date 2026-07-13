@@ -1,15 +1,145 @@
-import Link from 'next/link';
-import { ArrowLeft, Flag, Heart, ListVideo, Plus, Share2 } from 'lucide-react';
+"use client";
+
+import { useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { App } from "antd";
+import { ArrowLeft, Flag, Heart, ListVideo, Maximize, Plus, Share2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { apiAddBookmark, apiDeleteBookmark, apiIsBookmarked } from "@/lib/api/bookmarks";
+import { apiUpdateProgress, apiGetAllProgress } from "@/lib/api/progress";
+import { apiIncrementView } from "@/lib/api/comments";
+import { useEffect, useCallback } from "react";
 
 type VideoPlayerProps = {
   movieSlug: string;
+  movieId: string;
   movieTitle: string;
   episode: number;
   server: number;
   embedUrl: string;
+  hasTapParam: boolean;
 };
 
-const VideoPlayer = ({ movieSlug, movieTitle, episode, server, embedUrl }: VideoPlayerProps) => {
+export default function VideoPlayer({ movieSlug, movieId, movieTitle, episode, server, embedUrl, hasTapParam }: VideoPlayerProps) {
+  const router = useRouter();
+  const { user } = useAuth();
+  const { message } = App.useApp();
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  const [bookmarked, setBookmarked] = useState(false);
+  const [bookmarkLoading, setBookmarkLoading] = useState(false);
+  const elapsedRef = useRef(0);
+  const isSavingRef = useRef(false);
+  const savedKeyRef = useRef(""); // tránh React StrictMode double-invoke
+
+  const saveProgress = useCallback(
+    (positionSeconds: number, isCompleted: boolean) => {
+      if (!user || !movieId) return;
+      const key = `${user.id}-${movieId}-${episode}-${positionSeconds}`;
+      if (positionSeconds === 0 && savedKeyRef.current === key) return; // đã gọi rồi
+      if (isSavingRef.current) return;
+      isSavingRef.current = true;
+      if (positionSeconds === 0) savedKeyRef.current = key;
+      apiUpdateProgress(user.id, movieId, episode, {
+        slug: movieSlug,
+        positionSeconds,
+        isCompleted,
+      }).finally(() => { isSavingRef.current = false; });
+    },
+    [user, movieId, episode, movieSlug]
+  );
+
+  // Tính lượt xem khi bắt đầu xem (chỉ tính 1 lần per slug)
+  useEffect(() => {
+    apiIncrementView(movieSlug).catch(() => {});
+  }, [movieSlug]);
+
+  // Bước 1: Resume — redirect về tập đang xem dở nếu không có ?tap= trong URL
+  useEffect(() => {
+    if (hasTapParam || !user || !movieId) return;
+    apiGetAllProgress(user.id, movieId).then((list) => {
+      if (list.length === 0) return;
+      const latest = list.reduce((a, b) =>
+        new Date(a.lastWatchedAt) > new Date(b.lastWatchedAt) ? a : b
+      );
+      if (latest.episodeNumber > 1) {
+        router.replace(`/xem-phim/${movieSlug}?tap=${latest.episodeNumber}&sv=${server}`);
+      }
+    });
+  }, [user, movieId, hasTapParam, movieSlug, server, router]);
+
+  // Tự động bookmark khi bắt đầu xem (để progress hiển thị trên trang chủ)
+  useEffect(() => {
+    if (!user || !movieId) return;
+    apiIsBookmarked(user.id, movieId).then((isAlready) => {
+      if (!isAlready) {
+        apiAddBookmark(movieSlug).then(() => setBookmarked(true)).catch(() => {});
+      }
+    }).catch(() => {});
+  }, [user, movieId, movieSlug]);
+
+  // Ghi nhận bắt đầu xem & cập nhật mỗi 60 giây
+  useEffect(() => {
+    if (!user || !movieId) return;
+    elapsedRef.current = 0;
+    saveProgress(0, false);
+
+    const interval = setInterval(() => {
+      elapsedRef.current += 60;
+      saveProgress(elapsedRef.current, false);
+    }, 60_000);
+
+    return () => clearInterval(interval);
+  }, [user, movieId, episode, saveProgress]);
+
+  async function handleBookmark() {
+    if (!user) {
+      message.warning("Bạn cần đăng nhập để sử dụng tính năng này");
+      return;
+    }
+    if (bookmarkLoading) return;
+    setBookmarkLoading(true);
+    try {
+      if (bookmarked) {
+        await apiDeleteBookmark(user.id, movieId);
+        setBookmarked(false);
+        message.success("Đã xóa khỏi danh sách yêu thích");
+      } else {
+        await apiAddBookmark(movieSlug);
+        setBookmarked(true);
+        message.success("Đã thêm vào danh sách yêu thích");
+      }
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : "Đã có lỗi xảy ra");
+    } finally {
+      setBookmarkLoading(false);
+    }
+  }
+
+  function handleNextEpisode() {
+    saveProgress(elapsedRef.current, true);
+    router.replace(`/xem-phim/${movieSlug}?tap=${episode + 1}&sv=${server}`);
+  }
+
+  async function handleShare() {
+    const url = window.location.href;
+    try {
+      await navigator.clipboard.writeText(url);
+      message.success("Đã sao chép liên kết");
+    } catch {
+      message.error("Không thể sao chép, vui lòng copy thủ công");
+    }
+  }
+
+  function handleTheater() {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    if (iframe.requestFullscreen) {
+      iframe.requestFullscreen();
+    }
+  }
+
   return (
     <section className="relative z-10 w-full">
       <div className="mb-4 flex items-center gap-2 lg:px-10">
@@ -38,9 +168,10 @@ const VideoPlayer = ({ movieSlug, movieTitle, episode, server, embedUrl }: Video
 
           {embedUrl ? (
             <iframe
+              ref={iframeRef}
               id="embed-player"
               title={`${movieTitle} - Tập ${episode}`}
-              allow="autoplay; encrypted-media; picture-in-picture"
+              allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
               referrerPolicy="strict-origin-when-cross-origin"
               allowFullScreen
               src={embedUrl}
@@ -53,29 +184,67 @@ const VideoPlayer = ({ movieSlug, movieTitle, episode, server, embedUrl }: Video
           )}
         </div>
 
-        <div className="flex h-16 w-full items-center gap-3 overflow-x-auto rounded-b-xl bg-[#08080a] px-5 text-xs text-white/90">
-          <button type="button" className="inline-flex items-center gap-2 rounded-md px-3 py-2 hover:bg-white/10">
-            <Heart size={14} />
-            <span>Yêu thích</span>
+        {/* Action bar */}
+        <div className="flex h-16 w-full items-center gap-1 overflow-x-auto rounded-b-xl bg-[#08080a] px-5 text-xs text-white/90">
+          {/* Yêu thích */}
+          <button
+            type="button"
+            onClick={handleBookmark}
+            disabled={bookmarkLoading}
+            className={`inline-flex items-center gap-2 rounded-md px-3 py-2 transition disabled:opacity-60 hover:bg-white/10 ${bookmarked ? "text-[#f472b6]" : ""}`}
+          >
+            <Heart size={14} fill={bookmarked ? "currentColor" : "none"} />
+            <span>{bookmarked ? "Đã thích" : "Yêu thích"}</span>
           </button>
-          <button type="button" className="inline-flex items-center gap-2 rounded-md px-3 py-2 hover:bg-white/10">
+
+          {/* Thêm vào */}
+          <button
+            type="button"
+            onClick={() => message.info("Tính năng đang phát triển")}
+            className="inline-flex items-center gap-2 rounded-md px-3 py-2 hover:bg-white/10"
+          >
             <Plus size={14} />
             <span>Thêm vào</span>
           </button>
-          <button type="button" className="inline-flex items-center gap-2 rounded-md px-3 py-2 hover:bg-white/10">
+
+          {/* Chuyển tập */}
+          <button
+            type="button"
+            onClick={handleNextEpisode}
+            className="inline-flex items-center gap-2 rounded-md px-3 py-2 hover:bg-white/10"
+          >
             <span>Chuyển tập</span>
             <span className="h-2 w-2 rounded-full bg-[#f1c84f]" />
           </button>
-          <button type="button" className="inline-flex items-center gap-2 rounded-md px-3 py-2 hover:bg-white/10">
+
+          {/* Rạp phim — fullscreen iframe */}
+          <button
+            type="button"
+            onClick={handleTheater}
+            className="inline-flex items-center gap-2 rounded-md px-3 py-2 hover:bg-white/10"
+          >
+            <Maximize size={14} />
             <span>Rạp phim</span>
-            <span className="h-2 w-2 rounded-full bg-white/30" />
           </button>
-          <button type="button" className="inline-flex items-center gap-2 rounded-md px-3 py-2 hover:bg-white/10">
+
+          {/* Chia sẻ */}
+          <button
+            type="button"
+            onClick={handleShare}
+            className="inline-flex items-center gap-2 rounded-md px-3 py-2 hover:bg-white/10"
+          >
             <Share2 size={14} />
             <span>Chia sẻ</span>
           </button>
+
           <div className="flex-grow" />
-          <button type="button" className="inline-flex items-center gap-2 rounded-md px-3 py-2 hover:bg-white/10">
+
+          {/* Báo lỗi */}
+          <button
+            type="button"
+            onClick={() => message.info("Cảm ơn bạn đã báo lỗi, chúng tôi sẽ kiểm tra sớm")}
+            className="inline-flex items-center gap-2 rounded-md px-3 py-2 hover:bg-white/10"
+          >
             <Flag size={14} />
             <span>Báo lỗi</span>
           </button>
@@ -84,6 +253,4 @@ const VideoPlayer = ({ movieSlug, movieTitle, episode, server, embedUrl }: Video
       </div>
     </section>
   );
-};
-
-export default VideoPlayer;
+}

@@ -1,6 +1,5 @@
-import React from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
+import MoviePoster from '@/components/MoviePoster';
 import { MovieHorizontal } from '@/app/(default)/phimmoi/components/HappyMovie/components/types/movie'; // Điều chỉnh path phù hợp
 
 interface Props {
@@ -31,10 +30,9 @@ export default function MovieHorizontalCard({ movie, priority = false }: Props) 
             </div>
           )}
 
-          <Image
+          <MoviePoster
             alt={movie.title}
             src={movie.posterUrl}
-            fill
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1440px) 33vw, 25vw"
             quality={72}
             priority={priority}
@@ -52,10 +50,9 @@ export default function MovieHorizontalCard({ movie, priority = false }: Props) 
               href={`/phim/${movie.slug}`}
               className="block w-full relative h-0 pb-[150%] rounded-lg overflow-hidden bg-gray-800 shadow-[0_0_10px_5px_rgba(0,0,0,0.1)]"
             >
-              <Image
+              <MoviePoster
                 alt={movie.title}
                 src={movie.thumbUrl}
-                fill
                 sizes="80px"
                 quality={65}
                 loading="lazy"
@@ -66,15 +63,15 @@ export default function MovieHorizontalCard({ movie, priority = false }: Props) 
 
           {/* Thông tin Text */}
           <div className="flex-1 overflow-hidden mt-2">
-            <h4 className="font-medium text-base text-gray-100 truncate hover:text-blue-400 transition-colors">
-              <a title={movie.title} href={`/phim/${movie.slug}`}>
+            <h4 className="font-medium text-base truncate">
+              <Link title={movie.title} href={`/phim/${movie.slug}`} className="text-gray-100 hover:text-pink-400 no-underline transition-colors">
                 {movie.title}
-              </a>
+              </Link>
             </h4>
-            <h4 className="text-sm text-gray-400 truncate mb-2">
-              <a title={movie.originalTitle} href={`/phim/${movie.slug}`}>
+            <h4 className="text-sm truncate mb-2">
+              <Link title={movie.originalTitle} href={`/phim/${movie.slug}`} className="text-gray-400 hover:text-gray-200 no-underline transition-colors">
                 {movie.originalTitle}
-              </a>
+              </Link>
             </h4>
             
             <div className="flex flex-wrap items-center gap-2">

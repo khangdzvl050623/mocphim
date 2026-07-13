@@ -8,7 +8,26 @@
 @import "swiper/css/navigation";
 
 @custom-variant dark (&:is(.dark *));
+@keyframes mhp-enter {
+  0%   { opacity: 0; transform: scale(0.88) translateY(-6px); }
+  100% { opacity: 1; transform: scale(1)    translateY(0); }
+}
+@keyframes mhp-exit {
+  0%   { opacity: 1; transform: scale(1)    translateY(0); }
+  100% { opacity: 0; transform: scale(0.88) translateY(-6px); }
+}
+
+@keyframes logo-shine {
+  0%   { transform: translateX(-120%) skewX(-15deg); }
+  60%  { transform: translateX(220%) skewX(-15deg); }
+  100% { transform: translateX(220%) skewX(-15deg); }
+}
+
 @layer utilities {
+  .animate-logo-shine {
+    animation: logo-shine 3s ease-in-out infinite;
+  }
+
   /* Ẩn thanh cuộn nhưng vẫn cho phép lướt */
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
@@ -71,6 +90,11 @@ body {
   color: #1f2937;
 }
 
+.dark body {
+  background-color: #0d0f14;
+  color: #e5e7eb;
+}
+
 h1,
 h2,
 h3,
@@ -104,6 +128,33 @@ button {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* Disable default cross-fade so clip-path animation works both ways */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-track {
+  background: #1a1d28;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #3a3f52;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #4e5468;
+}
+
+/* Custom breakpoints for large/ultra-wide screens */
+@theme {
+  --breakpoint-3xl: 1920px;
+  --breakpoint-4xl: 2560px;
+  --breakpoint-5xl: 3200px;
 }
 
 @theme inline {
@@ -147,6 +198,15 @@ button {
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --animate-orbit: orbit calc(var(--duration)*1s) linear infinite;
+  @keyframes orbit {
+  0% {
+    transform: rotate(calc(var(--angle) * 1deg)) translateY(calc(var(--radius) * 1px)) rotate(calc(var(--angle) * -1deg));
+    }
+  100% {
+    transform: rotate(calc(var(--angle) * 1deg + 360deg)) translateY(calc(var(--radius) * 1px)) rotate(calc((var(--angle) * -1deg) - 360deg));
+    }
+  }
 }
 
 .dark {

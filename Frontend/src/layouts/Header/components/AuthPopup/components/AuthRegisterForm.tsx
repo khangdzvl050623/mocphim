@@ -3,16 +3,17 @@
 import { useState } from "react";
 import { AuthFormProps } from "../types";
 import { useAuth } from "@/contexts/AuthContext";
+import { App } from "antd";
 
-const AuthRegisterForm = ({ onSwitchMode }: AuthFormProps) => {
-  const { register } = useAuth();
+const AuthRegisterForm = ({ onSwitchMode, onClose }: AuthFormProps) => {
+  const { register, login } = useAuth();
+  const { message } = App.useApp();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -36,8 +37,10 @@ const AuthRegisterForm = ({ onSwitchMode }: AuthFormProps) => {
     setError("");
     setIsLoading(true);
     try {
-      const msg = await register(email, password, name);
-      setSuccessMsg(msg || "Đăng ký thành công! Kiểm tra email để xác thực.");
+      await register(email, password, name);
+      await login(email, password);
+      message.success("Đăng ký và đăng nhập thành công!");
+      onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Đăng ký thất bại");
     } finally {
@@ -45,52 +48,34 @@ const AuthRegisterForm = ({ onSwitchMode }: AuthFormProps) => {
     }
   };
 
-  if (successMsg) {
-    return (
-      <div className="space-y-6 text-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#1a2146] text-3xl">
-            📧
-          </div>
-          <p className="text-sm leading-relaxed text-[#bec8e6]">{successMsg}</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => onSwitchMode("login")}
-          className="h-11 w-full rounded-lg bg-[#ffd875] text-sm font-bold text-[#121931] transition hover:brightness-95"
-        >
-          Về trang đăng nhập
-        </button>
-      </div>
-    );
-  }
-
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
       <div className="flex flex-col gap-4">
-        <input
-          type="text"
-          placeholder="Họ và tên"
-          autoComplete="name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="block h-11 w-full rounded-lg border border-[#2c375f] bg-[#1a2146] px-4 text-sm text-white outline-none transition focus:border-[#ffd875]"
-        />
-        <input
-          type="email"
-          placeholder="Email"
-          autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="block h-11 w-full rounded-lg border border-[#2c375f] bg-[#1a2146] px-4 text-sm text-white outline-none transition focus:border-[#ffd875]"
-        />
+        <div className="flex gap-3">
+          <input
+            type="text"
+            placeholder="Họ và tên"
+            autoComplete="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="block h-11 w-full rounded-lg border border-[#1a1a1a] bg-[#4d4d4d] px-4 text-sm text-white outline-none transition focus:border-[#ffd875]"
+          />
+          <input
+            type="email"
+            placeholder="Email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="block h-11 w-full rounded-lg border border-[#1a1a1a] bg-[#4d4d4d] px-4 text-sm text-white outline-none transition focus:border-[#ffd875]"
+          />
+        </div>
         <input
           type="password"
           placeholder="Mật khẩu"
           autoComplete="new-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="block h-11 w-full rounded-lg border border-[#2c375f] bg-[#1a2146] px-4 text-sm text-white outline-none transition focus:border-[#ffd875]"
+          className="block h-11 w-full rounded-lg border border-[#1a1a1a] bg-[#4d4d4d] px-4 text-sm text-white outline-none transition focus:border-[#ffd875]"
         />
         <input
           type="password"
@@ -98,7 +83,7 @@ const AuthRegisterForm = ({ onSwitchMode }: AuthFormProps) => {
           autoComplete="new-password"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
-          className="block h-11 w-full rounded-lg border border-[#2c375f] bg-[#1a2146] px-4 text-sm text-white outline-none transition focus:border-[#ffd875]"
+          className="block h-11 w-full rounded-lg border border-[#1a1a1a] bg-[#4d4d4d] px-4 text-sm text-white outline-none transition focus:border-[#ffd875]"
         />
       </div>
 
