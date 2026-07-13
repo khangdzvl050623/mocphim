@@ -66,6 +66,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/auth/register", "/auth/login", "/auth/refresh", "/auth/logout",
                                 "/auth/verify-email", "/auth/forgot-password", "/auth/reset-password",
                                 "/oauth2/**", "/api/public/**").permitAll()
@@ -78,8 +79,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/sync/movies/all").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/sync/movies/count").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/years/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/views/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/views/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/comments/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/sync/movies/trigger").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/sync/movies/resync").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/comments/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )

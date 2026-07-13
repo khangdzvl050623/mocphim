@@ -13,6 +13,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -47,9 +48,62 @@ public class MovieSyncService {
         ).getContent();
     }
 
+    @Async
+    public void resyncAllAsync() {
+        log.info("[RESYNC] Bắt đầu resync toàn bộ phim thiếu ophimId...");
+        int totalUpdated = 0;
+        int totalNotFound = 0;
+        int totalFailed = 0;
+        int batchSize = 100;
+
+        while (true) {
+            List<MovieSync> toResync = movieSyncRepository
+                .findByOphimIdIsNull(PageRequest.of(0, batchSize))
+                .getContent();
+            if (toResync.isEmpty()) break;
+
+            for (MovieSync entity : toResync) {
+                try {
+                    Object response = ophimService.get("/phim/" + entity.getSlug());
+                    Map<?, ?> movieData = extractMovieData(response);
+                    if (movieData != null) {
+                        applyMovieFields(entity, movieData);
+                        movieSyncRepository.save(entity);
+                        totalUpdated++;
+                    } else {
+                        entity.setOphimId("NOT_FOUND");
+                        movieSyncRepository.save(entity);
+                        totalFailed++;
+                    }
+                } catch (OPhimApiException e) {
+                    if (e.getStatusCode() == 404) {
+                        entity.setOphimId("NOT_FOUND");
+                        movieSyncRepository.save(entity);
+                        totalNotFound++;
+                    } else {
+                        log.warn("[RESYNC] Lỗi slug {}: {}", entity.getSlug(), e.getMessage());
+                        totalFailed++;
+                    }
+                } catch (Exception e) {
+                    log.warn("[RESYNC] Lỗi slug {}: {}", entity.getSlug(), e.getMessage());
+                    totalFailed++;
+                }
+            }
+
+            long remaining = movieSyncRepository.countByOphimIdIsNull();
+            log.info("[RESYNC] Batch xong — updated={}, notFound={}, failed={}, remaining={}",
+                totalUpdated, totalNotFound, totalFailed, remaining);
+            if (remaining == 0) break;
+        }
+
+        log.info("[RESYNC] Hoàn tất — tổng updated={}, notFound={}, failed={}",
+            totalUpdated, totalNotFound, totalFailed);
+        clearCache();
+    }
+
     public Map<String, Long> resyncMissingFields(int limit) {
         List<MovieSync> toResync = movieSyncRepository
-            .findByOriginNameIsNull(PageRequest.of(0, limit))
+            .findByOphimIdIsNull(PageRequest.of(0, limit))
             .getContent();
 
         int updated = 0;
@@ -72,8 +126,8 @@ public class MovieSyncService {
                 }
             } catch (OPhimApiException e) {
                 if (e.getStatusCode() == 404) {
-                    // Slug không tồn tại trên OPhim — đánh dấu để bỏ qua ở lần resync sau
-                    entity.setOriginName("");
+                    // Slug không tồn tại trên OPhim — set sentinel để bỏ qua ở lần resync sau
+                    entity.setOphimId("NOT_FOUND");
                     movieSyncRepository.save(entity);
                     notFound++;
                 } else {
@@ -89,7 +143,7 @@ public class MovieSyncService {
         log.info("[RESYNC] Cập nhật {}, không tìm thấy {}, lỗi {} phim", updated, notFound, failed);
         if (updated > 0) clearCache();
 
-        long remaining = movieSyncRepository.countByOriginNameIsNull();
+        long remaining = movieSyncRepository.countByOphimIdIsNull();
         return Map.of(
             "updated",  (long) updated,
             "notFound", (long) notFound,
@@ -112,6 +166,7 @@ public class MovieSyncService {
     }
 
     public void applyMovieFields(MovieSync entity, Map<?, ?> movie) {
+        entity.setOphimId((String) movie.get("_id"));
         entity.setOriginName((String) movie.get("origin_name"));
         entity.setType((String) movie.get("type"));
         entity.setThumbUrl((String) movie.get("thumb_url"));

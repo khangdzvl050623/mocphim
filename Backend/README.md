@@ -1,16 +1,25 @@
-# MocPhim Project Documentation
+# MocPhim — Backend API
 
-<<<<<<< HEAD
 > Nền tảng xem phim trực tuyến — REST API proxy qua OPhim Public API  
 > **Stack:** Spring Boot 3.4.5 · PostgreSQL · Redis · Java 17 · Spring Security 6 · JWT · Google OAuth2
-=======
-## Tổng quan
-Dự án MocPhim bao gồm hai phần chính: **Frontend** và **Backend**. Frontend được xây dựng bằng Next.js và TypeScript, trong khi Backend được phát triển bằng Java Spring Boot. Hai phần này giao tiếp với nhau thông qua các API RESTful để cung cấp trải nghiệm người dùng mượt mà và hiệu quả.
->>>>>>> 3418a81b3a7d808ed65364b7b6b848762d4414a7
 
-## Cấu trúc chi tiết dự án
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.4-6DB33F?logo=springboot&logoColor=white)
+![Java](https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
-<<<<<<< HEAD
+**Demo:** [PhimHayy](https://phimhayy.vercel.app) | **Full project:** [phanduykhai05/MocPhim](https://github.com/phanduykhai05/MocPhim)
+
+---
+
+## Developer
+
+> **Backend** was fully designed and developed by **Võ Hồ Vĩnh Khang** ([@khangdzvl050623](https://github.com/khangdzvl050623)).  
+> Frontend was developed by teammate [@phanduykhai05](https://github.com/phanduykhai05).
+
+---
+
 ## Base URL
 
 | Môi trường | URL |
@@ -23,71 +32,9 @@ Dự án MocPhim bao gồm hai phần chính: **Frontend** và **Backend**. Fron
 ## Response Format
 
 Mọi response đều có cùng cấu trúc:
-=======
-### Frontend
-Frontend là giao diện người dùng của ứng dụng, chịu trách nhiệm hiển thị nội dung và xử lý tương tác của người dùng. Dưới đây là cấu trúc chi tiết của thư mục Frontend:
 
-```
-Frontend/
-├── public/                # Tài nguyên tĩnh (hình ảnh, font chữ, favicon, v.v.)
-├── src/
-│   ├── app/              # Các trang chính và layout của ứng dụng
-│   │   ├── (default)/    # Layout mặc định và các trang con
-│   │   ├── phimmoi/      # Trang hiển thị danh sách phim mới
-│   │   ├── xem-phim/     # Trang phát phim theo slug
-│   │   ├── admin/        # Trang quản trị
-│   ├── components/       # Các thành phần giao diện tái sử dụng (icon, UI, Preloader, v.v.)
-│   ├── constants/        # Các hằng số toàn cục (ví dụ: URL API, giá trị mặc định)
-│   ├── hooks/            # Custom React hooks (ví dụ: useScrollPosition)
-│   ├── layouts/          # Các layout chính (Header, Footer, Sidebar)
-│   ├── lib/              # Hàm tiện ích và tích hợp API (ví dụ: home.ts, movie.ts)
-│   ├── styles/           # CSS toàn cục (globals.css)
-│   ├── types/            # Định nghĩa kiểu TypeScript (ví dụ: MovieItem, Swiper CSS)
-│   └── utils/            # Các hàm hỗ trợ (ví dụ: helpers.ts)
-├── package.json          # Metadata và dependencies của dự án
-├── tsconfig.json         # Cấu hình TypeScript
-├── tailwind.config.js    # Cấu hình Tailwind CSS
-└── README.md             # Tài liệu dự án
-```
-
-### Backend
-Backend là API server, chịu trách nhiệm xử lý logic nghiệp vụ, quản lý dữ liệu và cung cấp API cho Frontend. Dưới đây là cấu trúc chi tiết của thư mục Backend:
-
-```
-Backend/
-├── src/
-│   ├── main/
-│   │   ├── java/
-│   │   │   ├── mocphim/com/backend_web/
-│   │   │   │   ├── config/          # Cấu hình ứng dụng (CORS, Redis, v.v.)
-│   │   │   │   ├── controller/      # Các controller xử lý request từ Frontend
-│   │   │   │   ├── dto/             # Các lớp DTO (Data Transfer Object) để truyền dữ liệu
-│   │   │   │   ├── entity/          # Các entity ánh xạ với database
-│   │   │   │   ├── exception/       # Xử lý ngoại lệ toàn cục
-│   │   │   │   ├── repository/      # Các interface làm việc với database
-│   │   │   │   ├── scheduler/       # Các tác vụ định kỳ (ví dụ: đồng bộ dữ liệu phim)
-│   │   │   │   └── service/         # Các lớp xử lý logic nghiệp vụ
-│   │   ├── resources/               # File cấu hình ứng dụng (application.properties)
-│   └── test/                        # Các bài kiểm thử
-├── pom.xml                          # Cấu hình Maven
-└── README.md                        # Tài liệu dự án
-```
-
-## Giao tiếp giữa Frontend và Backend
-Frontend và Backend giao tiếp thông qua các API RESTful. Dưới đây là danh sách các API chính và cách sử dụng:
->>>>>>> 3418a81b3a7d808ed65364b7b6b848762d4414a7
-
-### 1. **Lấy danh sách phim**
-- **URL**: `http://103.229.53.17/api/movies`
-- **Phương thức**: `GET`
-- **Mô tả**: Lấy danh sách các bộ phim.
-- **Tham số**:
-  - `page` (tùy chọn): Số trang.
-  - `limit` (tùy chọn): Số lượng phim trên mỗi trang.
-- **Phản hồi**:
 ```json
 {
-<<<<<<< HEAD
   "status": true,
   "message": "success",
   "data": { },
@@ -357,68 +304,10 @@ async function handleForgotPassword(email) {
     setError(err.response?.data?.message || 'Có lỗi xảy ra')
   } finally {
     setLoading(false)
-=======
-  "data": [
-    {
-      "id": 1,
-      "title": "Tên phim",
-      "description": "Mô tả phim",
-      "poster": "URL hình ảnh",
-      "rating": 8.5
-    }
-  ],
-  "pagination": {
-    "page": 1,
-    "totalPages": 10
   }
 }
 ```
 
-### 2. **Lấy chi tiết phim**
-- **URL**: `http://103.229.53.17/api/movies/:id`
-- **Phương thức**: `GET`
-- **Mô tả**: Lấy thông tin chi tiết của một bộ phim.
-- **Tham số**:
-  - `id` (bắt buộc): ID của bộ phim.
-- **Phản hồi**:
-```json
-{
-  "id": 1,
-  "title": "Tên phim",
-  "description": "Mô tả phim",
-  "poster": "URL hình ảnh",
-  "rating": 8.5,
-  "episodes": [
-    {
-      "id": 101,
-      "title": "Tập 1",
-      "url": "URL phát phim"
-    }
-  ]
-}
-```
-
-### 3. **Xác thực người dùng**
-- **URL**: `http://103.229.53.17/api/auth/login`
-- **Phương thức**: `POST`
-- **Mô tả**: Đăng nhập người dùng.
-- **Tham số**:
-  - `email` (bắt buộc): Email của người dùng.
-  - `password` (bắt buộc): Mật khẩu.
-- **Phản hồi**:
-```json
-{
-  "token": "JWT token",
-  "user": {
-    "id": 1,
-    "name": "Tên người dùng",
-    "email": "Email người dùng"
->>>>>>> 3418a81b3a7d808ed65364b7b6b848762d4414a7
-  }
-}
-```
-
-<<<<<<< HEAD
 ---
 
 ### POST `/auth/reset-password` — Đặt lại mật khẩu
@@ -781,6 +670,763 @@ const isAdmin = user.roles.includes('ROLE_ADMIN')
 
 ---
 
+## Endpoints — Bookmark
+
+> Prefix: `/api/bookmarks`  
+> Tất cả endpoint yêu cầu `Authorization: Bearer <accessToken>`. `userId` được lấy tự động từ token — không cần gửi trong request.
+
+### Flow tổng quan
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        BOOKMARK FLOW                        │
+│                                                             │
+│  1. User bấm bookmark phim                                  │
+│     POST /api/bookmarks                                     │
+│     Body: { "slug": "ten-phim" }                            │
+│                                                             │
+│  2. User vào trang bookmark → danh sách kèm tiến trình      │
+│     GET /api/bookmarks/{userId}                             │
+│     → latestEpisode, positionSeconds, lastWatchedAt         │
+│       (null nếu chưa xem lần nào)                           │
+│                                                             │
+│  3. Kiểm tra trạng thái nút bookmark                        │
+│     GET /api/bookmarks/isBookmarked/{userId}/{movieId}      │
+│                                                             │
+│  4. Xóa bookmark                                            │
+│     DELETE /api/bookmarks/{userId}/{movieId}                │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### POST `/api/bookmarks` — Thêm bookmark
+
+**Header:** `Authorization: Bearer <accessToken>`
+
+**Request:**
+```json
+{
+  "slug": "nhip-dap-trai-tim-phan-5"
+}
+```
+
+> Backend tự lấy `userId` từ token và tra cứu `movieId`, `movieTitle`, `posterUrl`, `mediaType` từ DB (đã sync từ OPhim). FE chỉ cần gửi `slug` của phim.
+
+**Response `200`:**
+```json
+{
+  "status": true,
+  "data": {
+    "id": 1,
+    "userId": 3,
+    "movieId": "69dfcfeb41d6bb2c315360fb",
+    "slug": "nhip-dap-trai-tim-phan-5",
+    "movieTitle": "Nhịp Đập Trái Tim (Phần 5)",
+    "posterUrl": "nhip-dap-trai-tim-phan-5-poster.jpg",
+    "mediaType": "series",
+    "bookmarkDate": "2026-05-22T10:00:00",
+    "latestEpisode": null,
+    "positionSeconds": null,
+    "episodeCompleted": null,
+    "lastWatchedAt": null
+  }
+}
+```
+
+> `latestEpisode`, `positionSeconds`, `episodeCompleted`, `lastWatchedAt` — `null` khi user chưa xem tập nào của phim đó.
+
+**Response lỗi `400`:**
+```json
+{ "status": false, "message": "Already bookmarked" }
+{ "status": false, "message": "Phim chưa được đồng bộ, vui lòng thử lại sau" }
+```
+
+---
+
+### GET `/api/bookmarks/{userId}` — Danh sách bookmark
+
+**Header:** `Authorization: Bearer <accessToken>`
+
+```
+GET /api/bookmarks/3
+```
+
+> `userId` trong path phải khớp với token. Nếu không khớp → `403 Forbidden`.
+
+**Response `200`:** Mảng bookmark sắp xếp theo `bookmarkDate` mới nhất, kèm tiến trình tập xem gần nhất (nếu có):
+
+```json
+{
+  "status": true,
+  "data": [
+    {
+      "id": 1,
+      "userId": 3,
+      "movieId": "69dfcfeb41d6bb2c315360fb",
+      "slug": "nhip-dap-trai-tim-phan-5",
+      "movieTitle": "Nhịp Đập Trái Tim (Phần 5)",
+      "posterUrl": "nhip-dap-trai-tim-phan-5-poster.jpg",
+      "mediaType": "series",
+      "bookmarkDate": "2026-05-22T10:00:00",
+      "latestEpisode": 4,
+      "positionSeconds": 1234,
+      "episodeCompleted": false,
+      "lastWatchedAt": "2026-05-27T20:30:00"
+    }
+  ]
+}
+```
+
+---
+
+### GET `/api/bookmarks/isBookmarked/{userId}/{movieId}` — Kiểm tra đã bookmark chưa
+
+**Header:** `Authorization: Bearer <accessToken>`
+
+```
+GET /api/bookmarks/isBookmarked/3/69dfcfeb41d6bb2c315360fb
+```
+
+> `userId` trong path phải khớp với token. Nếu không khớp → `403 Forbidden`.
+
+**Response `200`:**
+```json
+{ "status": true, "data": true }
+```
+
+Dùng để FE render nút bookmark (đã bookmark / chưa bookmark).
+
+---
+
+### DELETE `/api/bookmarks/{userId}/{movieId}` — Xóa bookmark
+
+**Header:** `Authorization: Bearer <accessToken>`
+
+```
+DELETE /api/bookmarks/3/69dfcfeb41d6bb2c315360fb
+```
+
+> `userId` trong path phải khớp với token. Nếu không khớp → `403 Forbidden`.
+
+**Response `200`:**
+```json
+{ "status": true, "data": "Xóa bookmark thành công" }
+```
+
+---
+
+## Endpoints — WatchProgress (Tiến trình xem)
+
+> Prefix: `/api/v1/progress`  
+> Tất cả endpoint yêu cầu `Authorization: Bearer <accessToken>`. `userId` trong path phải khớp với token — nếu không khớp → `403 Forbidden`.
+
+### Flow tổng quan
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     WATCH PROGRESS FLOW                      │
+│                                                             │
+│  1. User mở trang phim (không có tập trong URL)             │
+│     GET /api/v1/progress/{userId}/resume/{slug}             │
+│     → episodeNumber, positionSeconds của tập gần nhất       │
+│     → null nếu chưa xem lần nào → FE load tập 1            │
+│                                                             │
+│  2. User đang xem — mỗi ~30s FE gọi để lưu vị trí          │
+│     PATCH /api/v1/progress/{userId}/{movieId}/{episode}     │
+│     Body: { "positionSeconds": 320 }                        │
+│                                                             │
+│  3. User mở lại player (click vào tập cụ thể)               │
+│     GET /api/v1/progress/{userId}/{movieId}/{episode}       │
+│     → positionSeconds để seek đúng vị trí                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+> **movieId** là `_id` từ OPhim, lấy từ response của `GET /api/v1/movies/{slug}`.
+
+---
+
+### GET `/api/v1/progress/{userId}/resume/{slug}` — Lấy điểm tiếp tục
+
+Gọi khi user mở trang phim để biết cần load tập mấy. Trả về tập có `lastWatchedAt` mới nhất.
+
+```
+GET /api/v1/progress/3/resume/rick-va-morty-phan-9
+```
+
+**Response `200` (đã xem):**
+```json
+{
+  "status": true,
+  "data": {
+    "userId": 3,
+    "movieId": "68a1b2c3d4e5f6",
+    "slug": "rick-va-morty-phan-9",
+    "episodeNumber": 5,
+    "positionSeconds": 320,
+    "isCompleted": false,
+    "lastWatchedAt": "2026-05-28T20:30:00"
+  }
+}
+```
+
+**Response `200` (chưa xem lần nào):**
+```json
+{ "status": true, "data": null }
+```
+
+> Khi `data` là `null` → FE load tập 1, không cần seek.
+
+---
+
+### GET `/api/v1/progress/{userId}/{movieId}/{episodeNumber}` — Tiến trình 1 tập
+
+Gọi khi user mở player để seek đúng vị trí đã xem trước đó.
+
+```
+GET /api/v1/progress/3/68a1b2c3d4e5f6/5
+```
+
+**Response `200`:**
+```json
+{
+  "status": true,
+  "data": {
+    "userId": 3,
+    "movieId": "68a1b2c3d4e5f6",
+    "slug": "rick-va-morty-phan-9",
+    "episodeNumber": 5,
+    "positionSeconds": 320,
+    "isCompleted": false,
+    "lastWatchedAt": "2026-05-28T20:30:00"
+  }
+}
+```
+
+> Nếu chưa có tiến trình cho tập đó → trả về `positionSeconds: 0`, `isCompleted: false`.
+
+---
+
+### GET `/api/v1/progress/{userId}/{movieId}` — Tất cả tập đã xem của 1 phim
+
+Dùng cho trang chi tiết phim để đánh dấu tập nào đã xem.
+
+```
+GET /api/v1/progress/3/68a1b2c3d4e5f6
+```
+
+**Response `200`:**
+```json
+{
+  "status": true,
+  "data": [
+    { "episodeNumber": 1, "positionSeconds": 1440, "isCompleted": true, "lastWatchedAt": "..." },
+    { "episodeNumber": 5, "positionSeconds": 320, "isCompleted": false, "lastWatchedAt": "..." }
+  ]
+}
+```
+
+---
+
+### PATCH `/api/v1/progress/{userId}/{movieId}/{episodeNumber}` — Lưu/cập nhật tiến trình
+
+Gọi mỗi ~30s khi xem, khi pause, chuyển tập, hoặc đóng trang.
+
+```
+PATCH /api/v1/progress/3/68a1b2c3d4e5f6/5
+```
+
+**Request:**
+```json
+{
+  "slug": "rick-va-morty-phan-9",
+  "positionSeconds": 320,
+  "isCompleted": false
+}
+```
+
+| Field | Bắt buộc | Mô tả |
+|---|---|---|
+| `slug` | Chỉ lần đầu tiên | Bắt buộc khi record chưa tồn tại, bỏ qua được ở các lần sau |
+| `positionSeconds` | Không | Vị trí hiện tại tính bằng giây |
+| `isCompleted` | Không | `true` khi tập kết thúc |
+
+**Response `200`:**
+```json
+{
+  "status": true,
+  "data": {
+    "userId": 3,
+    "movieId": "68a1b2c3d4e5f6",
+    "slug": "rick-va-morty-phan-9",
+    "episodeNumber": 5,
+    "positionSeconds": 320,
+    "isCompleted": false,
+    "lastWatchedAt": "2026-05-28T20:35:00"
+  }
+}
+```
+
+---
+
+### Flow Progress — Frontend
+
+**1. Trang phim `/phim/{slug}`**
+```
+User mở trang → đã login?
+  Có → GET /api/v1/progress/{userId}/resume/{slug}
+        data.episodeNumber? → redirect /xem-phim/{slug}?tap=N&sv=0
+        null?               → ở lại trang, user tự chọn tập
+```
+
+**2. Trang xem `/xem-phim/{slug}?tap=N` — Restore vị trí**
+```
+HLS MANIFEST_PARSED fired
+  → đọc localStorage[progress_{slug}_{ep}]
+  → có token? → GET /api/v1/progress/{userId}/{movieId}/{ep}
+        server > 5s  → dùng server (server thắng)
+        server = 0   → giữ localStorage (không override)
+  → saved > 5s? → video.currentTime = saved
+```
+
+**3. Đang xem — Lưu tiến trình**
+
+Trigger: mỗi 30s (nếu đang play) + pause + ended + pagehide
+```
+currentTime > 5s?
+  → localStorage[progress_{slug}_{ep}] = seconds
+  → PATCH /api/v1/progress/{userId}/{movieId}/{ep}
+     { slug, positionSeconds, isCompleted }
+
+isCompleted = true khi currentTime >= 90% tổng thời lượng
+```
+
+**4. Chuyển tập (không F5)**
+```
+Click tập khác
+  → aborted = true        (chặn restoreProgress cũ)
+  → cleanup HLS cũ        (remove listeners, clear interval, destroy)
+  → HLS mới load tập mới → lặp lại bước 2
+```
+
+**Ghi chú kỹ thuật**
+
+| | |
+|---|---|
+| `userRef` | Auth load chậm không ảnh hưởng — save/restore luôn thấy user mới nhất |
+| `aborted` flag | Switch tập nhanh không bị race condition seek sai tập |
+| Server vs localStorage | Server thắng chỉ khi > 5s, tránh `server=0` ghi đè localStorage |
+| HLS deps | Không có user → HLS không restart khi auth state thay đổi |
+
+---
+
+## Endpoints — Comments (Bình luận)
+
+> Prefix: `/api/v1/comments`
+
+### Flow tổng quan
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        COMMENT FLOW                          │
+│                                                             │
+│  1. Vào trang phim → load bình luận (public, không cần login)│
+│     GET /api/v1/comments/{slug}?page=0&size=10              │
+│     Có token → truyền Bearer → server trả thêm userVote     │
+│                                                             │
+│  2. Đăng bình luận (cần đăng nhập)                          │
+│     POST /api/v1/comments/{slug}                            │
+│     Top-level: không có parentId                            │
+│     Reply: có parentId = id của comment cha                 │
+│                                                             │
+│  3. Vote bình luận (cần đăng nhập)                          │
+│     POST /api/v1/comments/{id}/vote                         │
+│     Gọi lại cùng loại vote → undo                           │
+│     Gọi khác loại → đổi vote                                │
+│                                                             │
+│  4. Xóa bình luận (cần đăng nhập)                           │
+│     DELETE /api/v1/comments/{id}                            │
+│     Chỉ chủ comment hoặc Admin mới được xóa                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### GET `/api/v1/comments/{slug}` — Lấy bình luận theo phim
+
+**Public** — không cần token. Nếu có token → server trả thêm `userVote` của người dùng đó.
+
+```
+GET /api/v1/comments/one-piece?page=0&size=10
+Authorization: Bearer <accessToken>   (tuỳ chọn)
+```
+
+| Param | Mặc định | Mô tả |
+|---|---|---|
+| `page` | `0` | Trang (bắt đầu từ 0) |
+| `size` | `10` | Số comment mỗi trang |
+
+**Response `200`:**
+```json
+{
+  "status": true,
+  "data": [
+    {
+      "id": 1,
+      "movieSlug": "one-piece",
+      "userId": 3,
+      "userName": "Nguyễn Văn A",
+      "userAvatar": "https://lh3.googleusercontent.com/...",
+      "content": "Phim hay quá!",
+      "isSpoiler": false,
+      "parentId": null,
+      "upvotes": 5,
+      "downvotes": 1,
+      "status": "approved",
+      "createdAt": "2026-06-01T10:00:00",
+      "updatedAt": "2026-06-01T10:00:00",
+      "userVote": "up",
+      "replies": [
+        {
+          "id": 2,
+          "userId": 4,
+          "userName": "Trần Thị B",
+          "userAvatar": null,
+          "content": "Đồng ý!",
+          "isSpoiler": false,
+          "parentId": 1,
+          "upvotes": 2,
+          "downvotes": 0,
+          "status": "approved",
+          "createdAt": "2026-06-01T10:05:00",
+          "updatedAt": "2026-06-01T10:05:00",
+          "userVote": null,
+          "replies": []
+        }
+      ]
+    }
+  ],
+  "pagination": {
+    "currentPage": 1,
+    "totalPages": 3,
+    "totalItems": 25,
+    "itemsPerPage": 10
+  }
+}
+```
+
+| Field | Mô tả |
+|---|---|
+| `status` | `"approved"` — chỉ comment đã duyệt mới hiển thị |
+| `userVote` | `"up"`, `"down"`, hoặc `null` — `null` nếu chưa vote hoặc chưa đăng nhập |
+| `replies` | Tối đa **5 reply** đầu tiên, sắp xếp theo `createdAt` tăng dần |
+| `parentId` | `null` = comment gốc; có giá trị = reply |
+
+> **Lưu ý FE:** `replies` chỉ trả 5 cái đầu. Nếu muốn "Xem thêm reply" thì cần gọi riêng (hiện chưa có endpoint riêng — load thêm khi cần).
+
+---
+
+### POST `/api/v1/comments/{slug}` — Đăng bình luận
+
+**Yêu cầu:** `Authorization: Bearer <accessToken>`
+
+**Request (comment gốc):**
+```json
+{
+  "content": "Phim hay lắm!",
+  "isSpoiler": false
+}
+```
+
+**Request (reply một comment):**
+```json
+{
+  "content": "Mình đồng ý!",
+  "isSpoiler": false,
+  "parentId": 1
+}
+```
+
+| Field | Bắt buộc | Mô tả |
+|---|---|---|
+| `content` | Có | Nội dung, tối đa 1000 ký tự |
+| `isSpoiler` | Không | Mặc định `false` |
+| `parentId` | Không | `null` = comment gốc; id comment cha = reply |
+
+**Response `200`:**
+```json
+{
+  "status": true,
+  "message": "Bình luận đã được đăng",
+  "data": {
+    "id": 10,
+    "movieSlug": "one-piece",
+    "userId": 3,
+    "userName": "Nguyễn Văn A",
+    "userAvatar": null,
+    "content": "Phim hay lắm!",
+    "isSpoiler": false,
+    "parentId": null,
+    "upvotes": 0,
+    "downvotes": 0,
+    "status": "approved",
+    "createdAt": "2026-06-07T09:00:00",
+    "updatedAt": "2026-06-07T09:00:00",
+    "userVote": null,
+    "replies": []
+  }
+}
+```
+
+> Comment mới có `status: "approved"` ngay — không cần duyệt. Admin có thể đổi trạng thái sau.
+
+---
+
+### POST `/api/v1/comments/{id}/vote` — Vote bình luận
+
+**Yêu cầu:** `Authorization: Bearer <accessToken>`
+
+```
+POST /api/v1/comments/10/vote
+```
+
+**Request:**
+```json
+{ "voteType": "up" }
+```
+
+| `voteType` | Mô tả |
+|---|---|
+| `"up"` | Upvote |
+| `"down"` | Downvote |
+
+**Hành vi:**
+
+| Trạng thái hiện tại | Gửi lên | Kết quả |
+|---|---|---|
+| Chưa vote | `"up"` | +1 upvote, `userVote: "up"` |
+| Đang `"up"` | `"up"` | Undo → upvote -1, `userVote: null` |
+| Đang `"up"` | `"down"` | Đổi → upvote -1, downvote +1, `userVote: "down"` |
+
+**Response `200`:** Trả về `CommentResponse` với `upvotes`, `downvotes`, `userVote` đã cập nhật.
+
+---
+
+### DELETE `/api/v1/comments/{id}` — Xóa bình luận
+
+**Yêu cầu:** `Authorization: Bearer <accessToken>`
+
+```
+DELETE /api/v1/comments/10
+```
+
+| Người gọi | Kết quả |
+|---|---|
+| Chủ comment | Xóa thành công |
+| Admin | Xóa thành công |
+| User khác | `403 Forbidden` |
+| Chưa đăng nhập | `401 Unauthorized` |
+
+**Response `200`:**
+```json
+{ "status": true, "data": "Đã xóa bình luận" }
+```
+
+---
+
+### Admin — GET `/api/v1/comments/admin/all` — Tất cả bình luận
+
+**Yêu cầu:** `ROLE_ADMIN`
+
+```
+GET /api/v1/comments/admin/all?page=0&size=20&status=pending
+```
+
+| Param | Mô tả |
+|---|---|
+| `status` | Lọc theo trạng thái: `pending`, `approved`, `spam`. Bỏ trống = tất cả |
+
+---
+
+### Admin — PATCH `/api/v1/comments/admin/{id}/status` — Duyệt / xử lý bình luận
+
+**Yêu cầu:** `ROLE_ADMIN`
+
+```
+PATCH /api/v1/comments/admin/10/status
+```
+
+**Request:**
+```json
+{ "status": "approved" }
+```
+
+| `status` | Ý nghĩa |
+|---|---|
+| `"approved"` | Hiển thị công khai |
+| `"pending"` | Chờ duyệt (ẩn khỏi public) |
+| `"spam"` | Đánh dấu spam (ẩn khỏi public) |
+
+---
+
+## Endpoints — Views (Lượt xem)
+
+> Prefix: `/api/v1/views`  
+> Tất cả endpoint đều **public**.
+
+### Flow tổng quan
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         VIEW FLOW                            │
+│                                                             │
+│  1. User bắt đầu xem video → gọi 1 lần duy nhất            │
+│     POST /api/v1/views/{slug}                               │
+│     → Cộng 1 view (chỉ lần đầu trong 24h)                  │
+│     → Thoát ra vào lại trong 24h: KHÔNG cộng thêm          │
+│                                                             │
+│  2. Lấy view count một phim                                  │
+│     GET /api/v1/views/{slug}                                │
+│                                                             │
+│  3. Lấy view count nhiều phim cùng lúc (cho trang listing)  │
+│     GET /api/v1/views/batch?slugs=one-piece,vincenzo        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Cơ chế chống buff view:**
+- Đã đăng nhập → dedup theo `userId` (đổi IP vẫn không buff được)
+- Chưa đăng nhập → dedup theo `IP address`
+- Cooldown: **24 giờ** — sau 24h xem lại mới cộng thêm 1 view
+- Lưu trữ trong Redis key: `view:{slug}:u:{userId}` hoặc `view:{slug}:ip:{ip}`
+
+---
+
+### POST `/api/v1/views/{slug}` — Ghi nhận lượt xem
+
+Gọi **một lần duy nhất** khi user bắt đầu xem video (không cần auth).
+
+```
+POST /api/v1/views/one-piece
+Authorization: Bearer <accessToken>   (tuỳ chọn — nếu có sẽ dedup theo userId)
+```
+
+**Response `200`:**
+```json
+{
+  "status": true,
+  "data": {
+    "viewCount": 1024,
+    "viewCountToday": 38
+  }
+}
+```
+
+> Nếu đã xem trong 24h → response vẫn trả `200` với count hiện tại, không tăng thêm.
+
+**FE nên gọi khi:**
+```javascript
+// Gọi khi HLS bắt đầu phát (MANIFEST_PARSED hoặc playing event)
+player.on('playing', () => {
+  if (!viewRecorded) {
+    viewRecorded = true
+    axios.post(`/api/v1/views/${slug}`)
+  }
+})
+```
+
+---
+
+### GET `/api/v1/views/{slug}` — Lấy view count một phim
+
+```
+GET /api/v1/views/one-piece
+```
+
+**Response `200`:**
+```json
+{
+  "status": true,
+  "data": {
+    "viewCount": 1024,
+    "viewCountToday": 38
+  }
+}
+```
+
+| Field | Mô tả |
+|---|---|
+| `viewCount` | Tổng view từ trước đến nay |
+| `viewCountToday` | View trong ngày hôm nay (reset lúc 00:00 theo lần xem tiếp theo) |
+
+---
+
+### GET `/api/v1/views/batch` — Lấy view count nhiều phim
+
+Dùng cho trang listing (homepage, thể loại, tìm kiếm) để lấy view count của nhiều phim trong 1 request.
+
+```
+GET /api/v1/views/batch?slugs=one-piece,vincenzo,naruto
+```
+
+**Response `200`:**
+```json
+{
+  "status": true,
+  "data": {
+    "one-piece": 1024,
+    "vincenzo": 5832,
+    "naruto": 9201
+  }
+}
+```
+
+> Phim nào chưa có lượt xem sẽ không xuất hiện trong map — FE xử lý bằng `data[slug] ?? 0`.
+
+**FE ví dụ:**
+```javascript
+const slugs = movies.map(m => m.slug).join(',')
+const { data } = await axios.get(`/api/v1/views/batch?slugs=${slugs}`)
+const viewCounts = data.data  // { [slug]: number }
+
+movies.forEach(movie => {
+  movie.viewCount = viewCounts[movie.slug] ?? 0
+})
+```
+
+---
+
+### GET `/api/v1/views/stats/today` — Tổng view toàn site hôm nay
+
+```
+GET /api/v1/views/stats/today
+```
+
+**Response `200`:**
+```json
+{ "status": true, "data": { "total": 4821 } }
+```
+
+---
+
+### GET `/api/v1/views/top` — Top phim nhiều view nhất
+
+```
+GET /api/v1/views/top?limit=10
+```
+
+**Response `200`:**
+```json
+{
+  "status": true,
+  "data": [
+    { "slug": "naruto", "viewCount": 9201, "viewCountToday": 120 },
+    { "slug": "vincenzo", "viewCount": 5832, "viewCountToday": 88 }
+  ]
+}
+```
+
+---
+
 ## Admin Endpoints (yêu cầu ROLE_ADMIN)
 
 Tất cả endpoint dưới đây yêu cầu header `Authorization: Bearer <accessToken>` của tài khoản có `ROLE_ADMIN`.
@@ -915,6 +1561,7 @@ docker compose up -d
 | `users` | 1 giờ |
 | `searchHistory` | 5 phút |
 | `syncedMovies` | 2 phút |
+| `watchProgress` (`wp:{userId}:{movieId}:{ep}`) | 2 giờ |
 
 ---
 
@@ -924,98 +1571,3 @@ docker compose up -d
 - `forgot-password` luôn trả cùng message — chống dò email tồn tại
 - Password hash BCrypt, JWT ký HS512
 - CORS chỉ cho phép origin trong `cors.allowed-origins`
-=======
-## Hướng dẫn triển khai trên Ubuntu Server
-
-### Cài đặt các yêu cầu
-1. **Cài đặt Node.js và pnpm**:
-   ```bash
-   curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
-   sudo apt-get install -y nodejs
-   npm install -g pnpm
-   ```
-2. **Cài đặt Java JDK 17**:
-   ```bash
-   sudo apt update
-   sudo apt install openjdk-17-jdk
-   ```
-3. **Cài đặt Maven**:
-   ```bash
-   sudo apt install maven
-   ```
-4. **Cài đặt Nginx**:
-   ```bash
-   sudo apt install nginx
-   ```
-
-### Triển khai Frontend
-1. Build ứng dụng:
-   ```bash
-   pnpm build
-   ```
-2. Copy thư mục `.next` lên server.
-3. Cấu hình Nginx để phục vụ ứng dụng:
-   - Tạo file cấu hình Nginx:
-     ```bash
-     sudo nano /etc/nginx/sites-available/mocphim-frontend
-     ```
-   - Thêm nội dung sau:
-     ```nginx
-     server {
-         listen 80;
-         server_name 103.229.53.17;
-
-         root /path/to/frontend/.next;
-         index index.html;
-
-         location / {
-             try_files $uri /index.html;
-         }
-     }
-     ```
-   - Kích hoạt cấu hình:
-     ```bash
-     sudo ln -s /etc/nginx/sites-available/mocphim-frontend /etc/nginx/sites-enabled/
-     sudo systemctl restart nginx
-     ```
-
-### Triển khai Backend
-1. Build ứng dụng:
-   ```bash
-   ./mvnw package
-   ```
-2. Chạy file JAR:
-   ```bash
-   java -jar target/backend-web-0.0.1-SNAPSHOT.jar
-   ```
-3. Cấu hình Nginx để reverse proxy đến cổng 8080:
-   - Tạo file cấu hình Nginx:
-     ```bash
-     sudo nano /etc/nginx/sites-available/mocphim-backend
-     ```
-   - Thêm nội dung sau:
-     ```nginx
-     server {
-         listen 80;
-         server_name 103.229.53.17;
-
-         location /api/ {
-             proxy_pass http://localhost:8080/;
-             proxy_set_header Host $host;
-             proxy_set_header X-Real-IP $remote_addr;
-             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-         }
-     }
-     ```
-   - Kích hoạt cấu hình:
-     ```bash
-     sudo ln -s /etc/nginx/sites-available/mocphim-backend /etc/nginx/sites-enabled/
-     sudo systemctl restart nginx
-     ```
-
-## Đóng góp
-Mọi đóng góp đều được hoan nghênh! Vui lòng fork repository và tạo pull request cho các thay đổi.
-
-## Giấy phép
-Dự án này được cấp phép theo giấy phép MIT.
->>>>>>> 3418a81b3a7d808ed65364b7b6b848762d4414a7

@@ -41,9 +41,9 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/mocphim
       DB_USERNAME: postgres
       DB_PASSWORD: 050623
-      GOOGLE_CLIENT_ID: (điền client id)
-      GOOGLE_CLIENT_SECRET: (điền client secret)
-      JWT_SECRET: mocphim-super-secret-jwt-key-change-this-in-production-minimum-256-bits-required
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:}
+      JWT_SECRET: ${JWT_SECRET:}
       OAUTH2_REDIRECT_URI: http://mocphim.duckdns.org/oauth2/callback/google
       FRONTEND_URL: https://moc-phim.vercel.app
       REDIS_HOST: redis
