@@ -44,8 +44,8 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:}
       JWT_SECRET: ${JWT_SECRET:}
-      OAUTH2_REDIRECT_URI: http://mocphim.duckdns.org/oauth2/callback/google
-      FRONTEND_URL: https://moc-phim.vercel.app
+      OAUTH2_REDIRECT_URI: https://mocphim.vercel.app/oauth2/callback/google
+      FRONTEND_URL: https://mocphim.vercel.app
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_USER: ""

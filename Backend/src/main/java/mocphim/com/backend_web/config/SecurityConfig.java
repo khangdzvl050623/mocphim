@@ -66,6 +66,8 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Health check public — cron ping giữ server Render không sleep
+                        .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/auth/register", "/auth/login", "/auth/refresh", "/auth/logout",
                                 "/auth/verify-email", "/auth/forgot-password", "/auth/reset-password",
@@ -81,10 +83,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/years/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/views/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/views/**").permitAll()
+                        // Phải đặt TRƯỚC matcher GET /api/v1/comments/** (first-match-wins)
+                        .requestMatchers("/api/v1/comments/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/v1/comments/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/sync/movies/trigger").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/sync/movies/resync").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/comments/admin/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/sync/movies/resync-all").hasRole("ADMIN")
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
