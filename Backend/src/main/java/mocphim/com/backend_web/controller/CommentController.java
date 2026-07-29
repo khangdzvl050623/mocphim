@@ -11,6 +11,7 @@ import mocphim.com.backend_web.model.Role;
 import mocphim.com.backend_web.security.CustomUserDetails;
 import mocphim.com.backend_web.service.CommentService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -65,7 +66,9 @@ public class CommentController {
 
     // ─── Admin ────────────────────────────────────────────────────────────────
 
+    // Không dựa vào thứ tự requestMatchers trong SecurityConfig — quyền gắn liền với method
     @GetMapping("/admin/all")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<List<?>>> getAll(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
@@ -80,6 +83,7 @@ public class CommentController {
     }
 
     @PatchMapping("/admin/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<CommentResponse>> updateStatus(
             @PathVariable Long id,
             @Valid @RequestBody UpdateCommentStatusRequest req) {

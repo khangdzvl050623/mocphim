@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 @Slf4j
@@ -28,6 +29,13 @@ public class MovieSyncService {
     private final OPhimService ophimService;
     private final CacheManager cacheManager;
     private final ObjectMapper objectMapper;
+
+    /** Chỉ cho phép một lượt resync-all chạy tại một thời điểm (tránh OOM trên free tier). */
+    private final AtomicBoolean resyncAllRunning = new AtomicBoolean(false);
+
+    public boolean isResyncAllRunning() {
+        return resyncAllRunning.get();
+    }
 
     @Cacheable(value = "syncedMovies", key = "'page_' + #page + '_' + #size")
     public Page<MovieSync> getPage(int page, int size) {
@@ -50,6 +58,21 @@ public class MovieSyncService {
 
     @Async
     public void resyncAllAsync() {
+        // CAS đặt trong chính method @Async: dù controller có gọi bao nhiêu lần,
+        // chỉ lượt đầu chạy thật, các lượt sau thoát ngay.
+        if (!resyncAllRunning.compareAndSet(false, true)) {
+            log.warn("[RESYNC] Đã có một lượt resync đang chạy — bỏ qua yêu cầu này.");
+            return;
+        }
+        try {
+            doResyncAll();
+        } finally {
+            // finally là bắt buộc: nếu không, một exception sẽ kẹt cờ ở true vĩnh viễn
+            resyncAllRunning.set(false);
+        }
+    }
+
+    private void doResyncAll() {
         log.info("[RESYNC] Bắt đầu resync toàn bộ phim thiếu ophimId...");
         int totalUpdated = 0;
         int totalNotFound = 0;

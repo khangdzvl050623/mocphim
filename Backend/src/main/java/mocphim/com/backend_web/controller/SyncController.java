@@ -76,6 +76,10 @@ public class SyncController {
      */
     @PostMapping("/movies/resync-all")
     public ResponseEntity<ApiResponse<Object>> resyncAllAsync() {
+        // Kiểm tra sớm để trả lời rõ ràng cho caller; lớp chặn thật nằm trong service
+        if (movieSyncService.isResyncAllRunning()) {
+            return ResponseEntity.ok(ApiResponse.success("Resync đang chạy, vui lòng đợi lượt hiện tại kết thúc"));
+        }
         long remaining = movieSyncRepository.countByOphimIdIsNull();
         if (remaining == 0) {
             return ResponseEntity.ok(ApiResponse.success("Không có phim nào cần resync"));
