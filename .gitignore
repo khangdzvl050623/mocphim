@@ -1,0 +1,41 @@
+# === OS ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === JVM crash dumps / logs ===
+hs_err_pid*.log
+replay_pid*.log
+*.hprof
+
+# === Build output ===
+target/
+build/
+out/
+dist/
+
+# === Node ===
+node_modules/
+.next/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# === Env / secrets ===
+.env
+.env.*
+!.env.example
+# Frontend/.env.local chỉ chứa biến NEXT_PUBLIC_* nên vẫn track có chủ đích
+!Frontend/.env.local
+
+# === IDE ===
+.vscode/
+*.iws
+*.ipr
+.idea/workspace.xml
+.idea/shelf/
+.idea/tasks.xml
+.idea/usage.statistics.xml
+.idea/dictionaries/
+.idea/httpRequests/
