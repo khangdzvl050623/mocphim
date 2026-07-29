@@ -29,15 +29,6 @@ export default function Footer() {
 
                     {/* Right Section */}
                     <div className="w-full xl:w-auto xl:min-w-[260px] flex flex-col xl:h-full xl:justify-between xl:self-stretch">
-                        <div className="space-y-0.5 text-center text-[14px] leading-relaxed text-gray-500 dark:text-[#85899b] xl:text-left xl:self-start">
-                            <p><i>--------Developer--------</i></p>
-                            <p>FullStack Phan Duy Khai</p>
-                            <p>BackEnd Vo Ho Vinh Khang.</p>
-                            <p>Testing Tran Thi Bich Ngoc</p>
-                            <p>Testing Nguyen Gia Huy</p>
-                            <p><i>--------Developer--------</i></p>
-                        </div>
-
                         <FooterBottom />
                     </div>
                 </div>
