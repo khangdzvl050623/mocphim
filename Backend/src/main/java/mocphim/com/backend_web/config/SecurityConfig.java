@@ -110,6 +110,7 @@ public class SecurityConfig {
                             String message = switch (jwtError != null ? jwtError : "none") {
                                 case "expired" -> "Token hết hạn, vui lòng refresh";
                                 case "invalid" -> "Token không hợp lệ";
+                                case "disabled" -> "Tài khoản đã bị vô hiệu hoá";
                                 default -> {
                                     String auth = request.getHeader("Authorization");
                                     yield (auth == null || auth.isBlank()) ? "Vui lòng đăng nhập" : "Token không hợp lệ";

@@ -14,6 +14,8 @@ import {
   apiLogout,
   apiRefreshToken,
   apiRegister,
+  ApiRejectedError,
+  withRetry,
   type AuthTokens,
   type AuthUser,
 } from "@/lib/api/auth";
@@ -21,6 +23,23 @@ import {
 const ACCESS_TOKEN_KEY = "accessToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
 const TOKEN_EXPIRY_KEY = "tokenExpiry";
+
+/* ------------------------------------------------------------------ *
+ * Tunable — sửa ở đây, không rải magic number trong logic bên dưới.
+ * ------------------------------------------------------------------ */
+
+/**
+ * Đơn vị của `expiresIn` trong response token.
+ * Backend hiện trả millisecond (app.jwt.access-expiration=1800000). Chuẩn OAuth2
+ * lại quy định second, nên khi đổi backend chỉ cần đổi hằng này.
+ */
+const EXPIRES_IN_UNIT: "ms" | "s" = "ms";
+
+/** Refresh sớm hơn thời điểm hết hạn để tránh đua với độ trễ đường truyền. */
+const TOKEN_EXPIRY_BUFFER_MS = 30_000;
+
+/** Chu kỳ kiểm tra tài khoản còn hiệu lực. Bỏ qua khi tab ẩn. */
+const ACCOUNT_CHECK_INTERVAL_MS = 60_000;
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -36,8 +55,9 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 function saveTokens(tokens: AuthTokens) {
   localStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken);
   localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
-  // expiresIn là milliseconds (1800000 = 30 phút), trừ 30s buffer
-  const expiry = Date.now() + tokens.expiresIn - 30_000;
+  const lifetimeMs =
+    EXPIRES_IN_UNIT === "ms" ? tokens.expiresIn : tokens.expiresIn * 1_000;
+  const expiry = Date.now() + lifetimeMs - TOKEN_EXPIRY_BUFFER_MS;
   localStorage.setItem(TOKEN_EXPIRY_KEY, String(expiry));
 }
 
@@ -50,7 +70,46 @@ function clearTokens() {
 function isAccessTokenValid(): boolean {
   const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
   if (!expiry) return false;
-  return Date.now() < parseInt(expiry, 10);
+  const parsed = parseInt(expiry, 10);
+  if (Number.isNaN(parsed)) return false;
+  return Date.now() < parsed;
+}
+
+/**
+ * Chỉ cho một request refresh chạy tại một thời điểm. Nhiều call cùng phát hiện
+ * token hết hạn sẽ chia sẻ chung một promise, tránh việc refresh song song.
+ */
+let refreshInFlight: Promise<AuthTokens> | null = null;
+
+function refreshOnce(refreshToken: string): Promise<AuthTokens> {
+  if (!refreshInFlight) {
+    refreshInFlight = apiRefreshToken(refreshToken).finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
+}
+
+/**
+ * Nguồn duy nhất để lấy access token còn hạn: tự refresh khi cần.
+ *
+ * Trả null khi không còn gì để dùng (chưa đăng nhập hoặc mất refresh token).
+ * Ném ApiRejectedError nếu server từ chối refresh token, ApiUnavailableError nếu
+ * không gọi được server — hai trường hợp này phải được xử lý khác nhau.
+ *
+ * Export để các module API khác dùng chung thay vì tự đọc localStorage rồi gửi
+ * token đã hết hạn.
+ */
+export async function getValidAccessToken(): Promise<string | null> {
+  const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+  if (accessToken && isAccessTokenValid()) return accessToken;
+
+  const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+  if (!refreshToken) return null;
+
+  const tokens = await refreshOnce(refreshToken);
+  saveTokens(tokens);
+  return tokens.accessToken;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -58,38 +117,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    async function restoreSession() {
-      const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
-      const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+    let cancelled = false;
 
-      if (!accessToken && !refreshToken) {
+    async function restoreSession() {
+      const hasSomething =
+        localStorage.getItem(ACCESS_TOKEN_KEY) ||
+        localStorage.getItem(REFRESH_TOKEN_KEY);
+      if (!hasSomething) {
         setIsLoading(false);
         return;
       }
 
       try {
-        if (accessToken && isAccessTokenValid()) {
-          const me = await apiGetMe(accessToken);
-          setUser(me);
-        } else if (refreshToken) {
-          const tokens = await apiRefreshToken(refreshToken);
-          saveTokens(tokens);
-          const me = await apiGetMe(tokens.accessToken);
-          setUser(me);
-        } else {
-          clearTokens();
-        }
-      } catch {
-        clearTokens();
+        // Server có thể chưa sẵn sàng (khởi động lại, deploy, scale from zero):
+        // chờ theo backoff thay vì kết luận token sai. withRetry chỉ thử lại với
+        // ApiUnavailableError, còn ApiRejectedError được ném ra ngay.
+        const me = await withRetry(
+          async () => {
+            const token = await getValidAccessToken();
+            if (!token) return null;
+            return apiGetMe(token);
+          },
+          { shouldAbort: () => cancelled },
+        );
+
+        if (cancelled) return;
+        if (me) setUser(me);
+        else clearTokens(); // không còn token nào dùng được
+      } catch (err) {
+        // Chỉ xoá session khi server thật sự từ chối. Với lỗi tạm thời, giữ
+        // nguyên token: refresh token còn hạn nhiều ngày, lần vào sau dùng lại
+        // được, không cần bắt người dùng đăng nhập lại.
+        if (err instanceof ApiRejectedError) clearTokens();
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     }
 
     restoreSession();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // Lắng nghe sự kiện auth:unauthorized được phát từ bất kỳ API call nào nhận 401
+  // Cửa để module khác buộc đăng xuất. Hợp đồng: CHỈ phát khi server thật sự từ
+  // chối (ApiRejectedError), tuyệt đối không phát khi gặp lỗi mạng hay 5xx —
+  // nếu không sẽ lặp lại đúng bug cũ là mất session vì một sự cố tạm thời.
+  // Hiện chưa module nào phát; auth.ts đã bỏ dispatch trên mọi 401.
   useEffect(() => {
     function handleUnauthorized() {
       clearTokens();
@@ -99,19 +173,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("auth:unauthorized", handleUnauthorized);
   }, []);
 
-  // Poll mỗi 30 giây để kiểm tra tài khoản có bị khoá không
+  // Định kỳ kiểm tra tài khoản còn hiệu lực (bị khoá / bị xoá thì đăng xuất).
   useEffect(() => {
     if (!user) return;
     const interval = setInterval(async () => {
-      const token = localStorage.getItem(ACCESS_TOKEN_KEY);
-      if (!token) return;
+      // Tab ẩn thì không cần kiểm tra — người dùng không tương tác.
+      if (typeof document !== "undefined" && document.hidden) return;
       try {
+        // Qua getValidAccessToken để tự refresh khi access token đã hết hạn.
+        // Trước đây chỗ này gửi thẳng token trong localStorage, nên sau khi token
+        // hết hạn là nhận 401 rồi đăng xuất, dù refresh token vẫn còn hạn.
+        const token = await getValidAccessToken();
+        if (!token) {
+          clearTokens();
+          setUser(null);
+          return;
+        }
         await apiGetMe(token);
-      } catch {
-        clearTokens();
-        setUser(null);
+      } catch (err) {
+        // Mất mạng hay server đang lỗi thì bỏ qua, chu kỳ sau kiểm tra lại.
+        if (err instanceof ApiRejectedError) {
+          clearTokens();
+          setUser(null);
+        }
       }
-    }, 30_000);
+    }, ACCOUNT_CHECK_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [user]);
 

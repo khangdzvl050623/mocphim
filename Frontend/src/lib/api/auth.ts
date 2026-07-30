@@ -1,4 +1,14 @@
 import { AUTH_BASE_URL } from "@/constants";
+import { requestData, requestJson } from "@/lib/api/http";
+
+// Re-export để chỗ gọi không phải import từ hai file. Định nghĩa nằm ở http.ts
+// vì cách phân loại lỗi này dùng chung cho mọi module API, không riêng auth.
+export {
+  ApiRejectedError,
+  ApiUnavailableError,
+  withRetry,
+  type ApiEnvelope,
+} from "@/lib/api/http";
 
 export interface AuthTokens {
   accessToken: string;
@@ -16,38 +26,19 @@ export interface AuthUser {
   roles: string[];
 }
 
-interface ApiResponse<T> {
-  status: boolean;
-  message: string;
-  data: T;
-}
+const url = (endpoint: string) => `${AUTH_BASE_URL}${endpoint}`;
 
-async function apiPost<T>(
-  endpoint: string,
-  body: Record<string, unknown>,
-  accessToken?: string,
-): Promise<T> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
+function jsonPost(body: Record<string, unknown>, accessToken?: string): RequestInit {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-
-  const res = await fetch(`${AUTH_BASE_URL}${endpoint}`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-  });
-
-  const json = (await res.json()) as ApiResponse<T>;
-  if (!json.status) throw new Error(json.message || "Đã có lỗi xảy ra");
-  return json.data;
+  return { method: "POST", headers, body: JSON.stringify(body) };
 }
 
 export async function apiLogin(
   email: string,
   password: string,
 ): Promise<AuthTokens> {
-  return apiPost<AuthTokens>("/auth/login", { email, password });
+  return requestData<AuthTokens>(url("/auth/login"), jsonPost({ email, password }));
 }
 
 /** Returns the confirmation message — user must verify email before logging in */
@@ -56,39 +47,31 @@ export async function apiRegister(
   password: string,
   name: string,
 ): Promise<string> {
-  const res = await fetch(`${AUTH_BASE_URL}/auth/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, name }),
-  });
-  const json = (await res.json()) as ApiResponse<null>;
-  if (!json.status) throw new Error(json.message || "Đã có lỗi xảy ra");
-  return json.message;
+  const envelope = await requestJson<null>(
+    url("/auth/register"),
+    jsonPost({ email, password, name }),
+  );
+  return envelope.message;
 }
 
 export async function apiRefreshToken(
   refreshToken: string,
 ): Promise<AuthTokens> {
-  return apiPost<AuthTokens>("/auth/refresh", { refreshToken });
+  return requestData<AuthTokens>(url("/auth/refresh"), jsonPost({ refreshToken }));
 }
 
 export async function apiGetMe(accessToken: string): Promise<AuthUser> {
-  const res = await fetch(`${AUTH_BASE_URL}/auth/me`, {
+  // Không tự phát auth:unauthorized ở đây nữa: một 401 lúc backend đang khởi
+  // động không chứng minh được token sai. Quyền quyết định đăng xuất thuộc
+  // AuthContext, nơi phân biệt được ApiRejectedError với ApiUnavailableError.
+  return requestData<AuthUser>(url("/auth/me"), {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  if (res.status === 401) {
-    if (typeof window !== "undefined") window.dispatchEvent(new Event("auth:unauthorized"));
-    throw new Error("Tài khoản không hợp lệ hoặc đã bị khoá");
-  }
-  const json = (await res.json()) as ApiResponse<AuthUser>;
-  if (!json.status)
-    throw new Error(json.message || "Không thể lấy thông tin người dùng");
-  return json.data;
 }
 
 export async function apiLogout(accessToken?: string): Promise<void> {
   try {
-    await fetch(`${AUTH_BASE_URL}/auth/logout`, {
+    await fetch(url("/auth/logout"), {
       method: "POST",
       headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
     });
@@ -98,18 +81,19 @@ export async function apiLogout(accessToken?: string): Promise<void> {
 }
 
 export async function apiForgotPassword(email: string): Promise<void> {
-  await apiPost<null>("/auth/forgot-password", { email });
+  await requestJson<null>(url("/auth/forgot-password"), jsonPost({ email }));
 }
 
 export async function apiResetPassword(
   token: string,
   newPassword: string,
 ): Promise<void> {
-  await apiPost<null>("/auth/reset-password", { token, newPassword });
+  await requestJson<null>(
+    url("/auth/reset-password"),
+    jsonPost({ token, newPassword }),
+  );
 }
 
 export async function apiVerifyEmail(token: string): Promise<void> {
-  const res = await fetch(`${AUTH_BASE_URL}/auth/verify-email?token=${token}`);
-  const json = (await res.json()) as ApiResponse<null>;
-  if (!json.status) throw new Error(json.message || "Xác nhận thất bại");
+  await requestJson<null>(url(`/auth/verify-email?token=${encodeURIComponent(token)}`));
 }
