@@ -66,8 +66,10 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Health check public — cron ping giữ server Render không sleep
-                        .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/**").permitAll()
+                        // Health check public — cron ping giữ server Render không sleep.
+                        // Không khoá method: Spring Security không coi HEAD là GET, nên matcher
+                        // giới hạn GET khiến uptime monitor ping bằng HEAD nhận 401 rồi tự tắt job.
+                        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/auth/register", "/auth/login", "/auth/refresh", "/auth/logout",
                                 "/auth/verify-email", "/auth/forgot-password", "/auth/reset-password",
