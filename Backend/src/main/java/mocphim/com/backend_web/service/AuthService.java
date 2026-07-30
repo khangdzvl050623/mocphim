@@ -13,6 +13,7 @@ import mocphim.com.backend_web.security.jwt.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -124,6 +125,12 @@ public class AuthService {
         Long userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User không tồn tại"));
+        // Refresh token là JWT stateless, không lưu DB nên không revoke được. Không
+        // chặn ở đây thì tài khoản bị khoá vẫn tự cấp access token mới cho tới khi
+        // refresh token hết hạn.
+        if (!user.isEnabled()) {
+            throw new DisabledException("Tài khoản đã bị vô hiệu hoá");
+        }
         return TokenResponse.builder()
                 .accessToken(jwtTokenProvider.generateAccessToken(user))
                 .refreshToken(refreshToken)
