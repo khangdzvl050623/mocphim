@@ -480,37 +480,53 @@ Yêu cầu `Authorization: Bearer <accessToken>`.
 
 3. Backend xác thực với Google, tạo JWT
 
-4. Backend redirect về FE:
-   https://moc-phim.vercel.app/oauth2/callback/google
-     ?accessToken=eyJ...
-     &refreshToken=eyJ...
+4. Backend phát mã dùng-một-lần (sống 60s, lưu Redis) rồi redirect về FE
+   (URL lấy từ biến `OAUTH2_REDIRECT_URI`):
+   https://moc-phim.vercel.app/oauth2/callback/google?code=Xk9__2mQ...
 
-5. FE đọc token từ URL → lưu → dùng như login thường
+5. FE đổi mã lấy token:
+   POST /auth/oauth2/exchange { "code": "Xk9__2mQ..." }
+   → { accessToken, refreshToken, tokenType, expiresIn }
+
+6. FE nạp token vào state đăng nhập → dùng như login thường
 ```
+
+> **Vì sao không gắn thẳng token vào URL?** URL trang callback bị ghi vào lịch sử
+> trình duyệt, có thể lọt vào header `Referer` khi trang gọi tài nguyên bên thứ ba,
+> và nằm trong access log của mọi proxy trên đường đi — trong khi refresh token sống
+> 7 ngày. Mã handoff thì dùng một lần, sống 60 giây, tự nó không mở được gì.
 
 ### FE cần tạo route `/oauth2/callback/google`
 
+> ⚠️ **Không** ghi thẳng `localStorage` rồi `router.push('/')`.
+> Router của Next.js điều hướng client-side, nên context giữ trạng thái đăng nhập
+> (thường đặt ở root layout) **không mount lại** — `user` vẫn là `null` và giao diện
+> hiện như chưa đăng nhập cho tới khi người dùng tự F5. Phải nạp token qua context.
+
 ```javascript
-// pages/oauth2/callback/google.jsx (Next.js) hoặc tương đương
+// src/app/oauth2/callback/google/page.tsx
+const { hydrateFromTokens } = useAuth()
+
 useEffect(() => {
   const params = new URLSearchParams(window.location.search)
-  const accessToken = params.get('accessToken')
-  const refreshToken = params.get('refreshToken')
   const error = params.get('error')
+  const code = params.get('code')
 
   if (error) {
     // "email_conflict" → email đã đăng ký bằng local
-    router.push(`/login?error=${error}`)
+    router.replace(`/login?error=${encodeURIComponent(error)}`)
     return
   }
 
-  if (accessToken && refreshToken) {
-    localStorage.setItem('accessToken', accessToken)
-    localStorage.setItem('refreshToken', refreshToken)
-    router.push('/')
-  }
+  apiExchangeOAuthCode(code)          // POST /auth/oauth2/exchange
+    .then(hydrateFromTokens)          // nạp vào context, không ghi thẳng localStorage
+    .then(() => router.replace('/'))  // replace: xoá URL chứa mã khỏi history
+    .catch(() => router.replace('/login?error=...'))
 }, [])
 ```
+
+Mã chỉ đổi được **một lần** và sống **60 giây** — phải gọi ngay khi trang load, và
+nhớ chặn việc effect chạy hai lần dưới React StrictMode (lượt thứ hai sẽ luôn lỗi).
 
 ### Các trường hợp lỗi callback
 
@@ -1534,9 +1550,44 @@ GOOGLE_CLIENT_SECRET=your_google_client_secret
 OAUTH2_REDIRECT_URI=http://localhost:3000/oauth2/callback/google
 FRONTEND_URL=http://localhost:3000
 
-# Email (Gmail App Password hoặc Brevo SMTP Key)
+# Email — Brevo SMTP
+# MAIL_USERNAME là SMTP login Brevo cấp (Settings → SMTP & API), KHÔNG phải email người gửi.
+# MAIL_PASSWORD là SMTP key, KHÔNG phải mật khẩu đăng nhập tài khoản Brevo.
+# MAIL_FROM phải là địa chỉ đã Verified ở Senders, domains & IPs — thiếu là không gửi được.
+MAIL_HOST=smtp-relay.brevo.com     # có default, chỉ set khi đổi nhà cung cấp
+MAIL_PORT=587                      # có default
+MAIL_USERNAME=xxxxxx@smtp-brevo.com
+MAIL_PASSWORD=xsmtpsib-...
+MAIL_FROM=sender-da-verify@example.com
+
+# Domain của chính backend — dùng dựng link trong mail xác thực tài khoản.
+# QUÊN SET là mọi link xác thực trỏ về localhost, user không verify được,
+# kẹt ở is_verified=false và sẽ không bao giờ nhận được mail quên mật khẩu.
 APP_URL=http://localhost:8080
 ```
+
+### Kiểm tra cấu hình email
+
+Luồng đăng ký / quên mật khẩu gửi mail bằng `@Async` và cố ý nuốt lỗi (mail hỏng
+không được phép chặn đăng ký), nên khi mail không tới thì response vẫn là 200.
+Dùng hai endpoint sau để chẩn đoán — cả hai yêu cầu `ROLE_ADMIN`:
+
+```bash
+# Xem cấu hình đang chạy (không trả về mật khẩu)
+curl -H "Authorization: Bearer <admin_token>" \
+  https://<backend>/api/v1/admin/email-config
+
+# Gửi thật, đồng bộ, trả nguyên nhân lỗi nếu thất bại
+curl -X POST -H "Authorization: Bearer <admin_token>" \
+  "https://<backend>/api/v1/admin/test-email?to=you@gmail.com"
+```
+
+| Thông báo trả về | Nguyên nhân |
+|---|---|
+| `SMTP từ chối đăng nhập` | Sai `MAIL_USERNAME` / `MAIL_PASSWORD` |
+| `Không mở được kết nối tới SMTP server` | Hosting chặn port SMTP outbound — cân nhắc chuyển sang gửi qua HTTP API |
+| `SMTP server từ chối địa chỉ gửi` | `MAIL_FROM` chưa được Verified |
+| `Chưa cấu hình biến môi trường MAIL_FROM` | Thiếu biến `MAIL_FROM` |
 
 ### Chạy
 

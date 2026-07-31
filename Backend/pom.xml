@@ -47,6 +47,19 @@
             <groupId>redis.clients</groupId>
             <artifactId>jedis</artifactId>
         </dependency>
+        <!--
+            HttpSession lưu ở Redis thay vì RAM của instance.
+            Luồng OAuth2 bắt buộc phải có session để giữ `state` (chống CSRF) giữa lúc
+            redirect sang Google và lúc Google trả về. Để trong RAM thì mỗi lần server
+            restart / ngủ dậy là mất, người dùng đang đăng nhập dở nhận
+            "authorization_request_not_found"; và khi chạy nhiều instance thì callback
+            rơi vào instance khác sẽ không tìm thấy session.
+            Dùng chung JedisConnectionFactory đã khai trong RedisConfig.
+        -->
+        <dependency>
+            <groupId>org.springframework.session</groupId>
+            <artifactId>spring-session-data-redis</artifactId>
+        </dependency>
         <!-- PostgreSQL -->
         <dependency>
             <groupId>org.postgresql</groupId>

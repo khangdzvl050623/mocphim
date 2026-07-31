@@ -6,6 +6,7 @@ import { requestData, requestJson } from "@/lib/api/http";
 export {
   ApiRejectedError,
   ApiUnavailableError,
+  COLD_START_RETRY_DELAYS_MS,
   withRetry,
   type ApiEnvelope,
 } from "@/lib/api/http";
@@ -58,6 +59,18 @@ export async function apiRefreshToken(
   refreshToken: string,
 ): Promise<AuthTokens> {
   return requestData<AuthTokens>(url("/auth/refresh"), jsonPost({ refreshToken }));
+}
+
+/**
+ * Đổi mã dùng-một-lần từ luồng đăng nhập Google lấy token.
+ *
+ * Mã sống 60 giây và chỉ đổi được một lần, nên phải gọi ngay khi trang callback load.
+ */
+export async function apiExchangeOAuthCode(code: string): Promise<AuthTokens> {
+  return requestData<AuthTokens>(
+    url("/auth/oauth2/exchange"),
+    jsonPost({ code }),
+  );
 }
 
 export async function apiGetMe(accessToken: string): Promise<AuthUser> {

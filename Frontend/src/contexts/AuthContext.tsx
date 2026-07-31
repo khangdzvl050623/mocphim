@@ -15,6 +15,7 @@ import {
   apiRefreshToken,
   apiRegister,
   ApiRejectedError,
+  COLD_START_RETRY_DELAYS_MS,
   withRetry,
   type AuthTokens,
   type AuthUser,
@@ -47,6 +48,15 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<AuthUser>;
   /** Trả về message xác nhận gửi email — không tự đăng nhập */
   register: (email: string, password: string, name: string) => Promise<string>;
+  /**
+   * Nạp phiên từ token có sẵn, dùng cho luồng OAuth2: token về qua query string
+   * của trang callback chứ không qua apiLogin.
+   *
+   * Bắt buộc phải đi qua đây thay vì tự ghi localStorage rồi điều hướng: provider
+   * này nằm ở root layout nên điều hướng client-side KHÔNG làm nó mount lại, state
+   * `user` sẽ vẫn là null và giao diện hiện như chưa đăng nhập cho tới khi F5.
+   */
+  hydrateFromTokens: (tokens: AuthTokens) => Promise<AuthUser>;
   logout: () => void;
 }
 
@@ -138,7 +148,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (!token) return null;
             return apiGetMe(token);
           },
-          { shouldAbort: () => cancelled },
+          {
+            delaysMs: COLD_START_RETRY_DELAYS_MS,
+            shouldAbort: () => cancelled,
+          },
         );
 
         if (cancelled) return;
@@ -218,6 +231,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const hydrateFromTokens = useCallback(
+    async (tokens: AuthTokens): Promise<AuthUser> => {
+      saveTokens(tokens);
+      // Cũng chịu cold start: người dùng vừa qua Google về, backend có thể đang ngủ dậy.
+      const me = await withRetry(() => apiGetMe(tokens.accessToken), {
+        delaysMs: COLD_START_RETRY_DELAYS_MS,
+      });
+      setUser(me);
+      return me;
+    },
+    [],
+  );
+
   const logout = useCallback(() => {
     const token = localStorage.getItem(ACCESS_TOKEN_KEY) ?? undefined;
     void apiLogout(token);
@@ -226,7 +252,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ user, isLoading, login, register, hydrateFromTokens, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

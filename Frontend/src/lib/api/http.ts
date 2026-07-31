@@ -144,6 +144,20 @@ export async function requestData<T>(
 /** Khoảng chờ giữa các lần thử. Phần tử đầu là 0 = thử ngay. */
 export const DEFAULT_RETRY_DELAYS_MS: readonly number[] = [0, 1_000, 3_000, 9_000];
 
+/**
+ * Backoff dài cho lần khôi phục phiên đầu tiên sau khi mở trang.
+ *
+ * Backoff mặc định chỉ chờ tổng 13 giây — đủ cho server khởi động lại bình thường,
+ * nhưng KHÔNG đủ cho hosting free-tier ngủ khi không có traffic: đánh thức instance
+ * mất 30-60 giây. Hết retry sớm thì token vẫn còn nguyên trong localStorage nhưng
+ * user state là null, giao diện hiện y như vừa bị đăng xuất.
+ *
+ * Tổng ~50 giây, chia nhỏ dần để trường hợp server tỉnh sớm vẫn vào nhanh.
+ */
+export const COLD_START_RETRY_DELAYS_MS: readonly number[] = [
+  0, 1_000, 2_000, 4_000, 8_000, 15_000, 20_000,
+];
+
 export interface RetryOptions {
   delaysMs?: readonly number[];
   /** Mặc định chỉ thử lại với lỗi tạm thời — không thử lại khi bị từ chối. */

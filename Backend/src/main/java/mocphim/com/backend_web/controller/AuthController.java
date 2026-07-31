@@ -79,6 +79,18 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(token));
     }
 
+    /**
+     * Đổi mã dùng-một-lần từ luồng đăng nhập Google lấy token.
+     *
+     * Tồn tại để token không phải đi qua query string của trang callback — chỗ bị ghi
+     * vào lịch sử trình duyệt, header Referer và access log của proxy.
+     */
+    @PostMapping("/oauth2/exchange")
+    public ResponseEntity<ApiResponse<TokenResponse>> exchangeOAuth2Code(@RequestBody Map<String, String> body) {
+        TokenResponse token = authService.exchangeOAuth2Code(body.get("code"));
+        return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công", token));
+    }
+
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserResponse>> me(@AuthenticationPrincipal CustomUserDetails userDetails) {
         UserResponse user = authService.getCurrentUser(userDetails.getUser().getId());
