@@ -40,6 +40,9 @@ public class CustomOAuth2UserService extends OidcUserService {
             }
             existing.setName(name);
             existing.setAvatar(avatar);
+            // Tự vá các tài khoản Google tạo trước khi có setVerified(true) bên dưới:
+            // lần đăng nhập kế tiếp là thoát khỏi trạng thái kẹt, khỏi phải chạy SQL tay.
+            existing.setVerified(true);
             return userRepository.save(existing);
         }).orElseGet(() -> {
             User newUser = new User();
@@ -48,6 +51,10 @@ public class CustomOAuth2UserService extends OidcUserService {
             newUser.setAvatar(avatar);
             newUser.setProvider("google");
             newUser.setProviderId(providerId);
+            // Google đã xác thực quyền sở hữu email, không cần gửi mail verify nữa.
+            // Thiếu dòng này thì user Google kẹt ở isVerified=false, và forgotPassword
+            // (lọc findByEmailAndIsVerifiedTrue) sẽ im lặng không gửi mail reset.
+            newUser.setVerified(true);
             newUser.setRoles(new HashSet<>(Set.of(Role.ROLE_USER)));
             return userRepository.save(newUser);
         });
