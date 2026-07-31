@@ -1586,6 +1586,11 @@ MAIL_USERNAME=xxxxxx@smtp-brevo.com
 MAIL_PASSWORD=xsmtpsib-...
 MAIL_FROM=sender-da-verify@example.com
 
+# Chỉ set khi hosting CHẶN port SMTP (Render là một ví dụ). Có key này thì hệ thống
+# tự chuyển sang gửi qua HTTP API cổng 443; để trống thì chạy SMTP như trên.
+# Là API key (tab "API keys", tiền tố xkeysib-), KHÁC SMTP key ở MAIL_PASSWORD.
+BREVO_API_KEY=xkeysib-...
+
 # Domain của chính backend — dùng dựng link trong mail xác thực tài khoản.
 # QUÊN SET là mọi link xác thực trỏ về localhost, user không verify được,
 # kẹt ở is_verified=false và sẽ không bao giờ nhận được mail quên mật khẩu.
@@ -1611,9 +1616,27 @@ curl -X POST -H "Authorization: Bearer <admin_token>" \
 | Thông báo trả về | Nguyên nhân |
 |---|---|
 | `SMTP từ chối đăng nhập` | Sai `MAIL_USERNAME` / `MAIL_PASSWORD` |
-| `Không mở được kết nối tới SMTP server` | Hosting chặn port SMTP outbound — cân nhắc chuyển sang gửi qua HTTP API |
+| `Không mở được kết nối tới SMTP server` | Hosting chặn port SMTP outbound → set `BREVO_API_KEY` để chuyển sang HTTP API |
 | `SMTP server từ chối địa chỉ gửi` | `MAIL_FROM` chưa được Verified |
 | `Chưa cấu hình biến môi trường MAIL_FROM` | Thiếu biến `MAIL_FROM` |
+| `Brevo từ chối API key` | `BREVO_API_KEY` sai — dễ nhầm SMTP key với API key |
+| `Brevo từ chối nội dung gửi` | `MAIL_FROM` chưa Verified (đường HTTP API) |
+| `Hết quota gửi` | Tài khoản Brevo hết lượt trong ngày |
+
+### Hai đường gửi mail
+
+Hệ thống chọn tự động, không có cờ bật/tắt riêng để khỏi phải giữ đồng bộ hai thứ:
+
+| Điều kiện | Đường dùng | Hợp với |
+|---|---|---|
+| `BREVO_API_KEY` có giá trị | Brevo HTTP API, cổng 443 | Render và các hosting chặn SMTP |
+| `BREVO_API_KEY` để trống | SMTP `smtp-relay.brevo.com:587` | VPS, máy dev |
+
+Log lúc khởi động ghi rõ đang dùng đường nào — xem `MailConfig.mailTransport()`.
+
+**Nhận biết hosting chặn SMTP:** lỗi là `SocketTimeoutException: Connect timed out`
+sau đúng khoảng timeout đã cấu hình (10s), **không phải** lỗi xác thực. Nghĩa là gói
+tin không ra được khỏi mạng chứ credential không có vấn đề gì.
 
 ### Chạy
 
