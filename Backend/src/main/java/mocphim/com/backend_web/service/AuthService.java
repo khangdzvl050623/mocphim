@@ -94,16 +94,22 @@ public class AuthService {
         userRepository.save(user);
     }
 
+    /**
+     * Không lọc theo isVerified nữa.
+     *
+     * Trước đây tài khoản chưa xác thực email bị bỏ qua im lặng, mà login lại không
+     * chặn nhóm này — nên họ dùng bình thường cho tới lúc quên mật khẩu thì không hiểu
+     * vì sao mãi không có mail. Link reset gửi tới chính hộp thư đó, ai bấm được nghĩa
+     * là sở hữu email — đúng bằng chứng mà bước verify đang đòi hỏi, nên bắt xác thực
+     * trước rồi mới cho đặt lại mật khẩu chỉ là bắt đi hai vòng mail cho một nhu cầu.
+     */
     public void forgotPassword(String email) {
-        Optional<User> target = userRepository.findByEmailAndIsVerifiedTrue(email);
+        Optional<User> target = userRepository.findByEmail(email);
         if (target.isEmpty()) {
             // Response vẫn giữ message chung để không lộ email nào có thật trong hệ thống,
-            // nhưng phải log lại: trước đây `ifPresent` im lặng khiến trường hợp tài khoản
-            // kẹt is_verified=false trông y hệt trường hợp SMTP hỏng.
-            boolean exists = userRepository.findByEmail(email).isPresent();
-            log.warn("Bỏ qua yêu cầu quên mật khẩu cho {} — {}", email,
-                    exists ? "tài khoản tồn tại nhưng chưa xác thực email (is_verified=false)"
-                            : "email không tồn tại");
+            // nhưng phải log lại: trước đây `ifPresent` im lặng khiến mọi nguyên nhân
+            // trông y hệt nhau khi debug.
+            log.warn("Bỏ qua yêu cầu quên mật khẩu cho {} — email không tồn tại", email);
             return;
         }
 
@@ -124,7 +130,44 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setResetToken(null);
         user.setResetExpires(null);
+        // Bấm được link reset = đọc được hộp thư = đã chứng minh sở hữu email, đúng
+        // điều bước verify cần. Nhân tiện gỡ luôn tài khoản khỏi trạng thái kẹt thay vì
+        // bắt xác thực thêm một vòng nữa.
+        if (!user.isVerified()) {
+            user.setVerified(true);
+            user.setVerifyToken(null);
+            user.setVerifyExpires(null);
+            log.info("Đánh dấu đã xác thực cho {} sau khi đặt lại mật khẩu thành công", user.getEmail());
+        }
         userRepository.save(user);
+    }
+
+    /**
+     * Gửi lại mail xác thực. Dành cho người đăng ký xong không bấm link — họ vẫn đăng
+     * nhập được bình thường nên không có gì nhắc, tài khoản cứ nằm im ở trạng thái chưa
+     * xác thực.
+     *
+     * Im lặng với email không tồn tại hoặc đã xác thực rồi: cùng một response cho mọi
+     * trường hợp, không để endpoint này thành công cụ dò email nào có đăng ký.
+     */
+    public void resendVerification(String email) {
+        Optional<User> target = userRepository.findByEmail(email);
+        if (target.isEmpty()) {
+            log.warn("Bỏ qua yêu cầu gửi lại mail xác thực cho {} — email không tồn tại", email);
+            return;
+        }
+
+        User user = target.get();
+        if (user.isVerified()) {
+            log.info("Bỏ qua yêu cầu gửi lại mail xác thực cho {} — tài khoản đã xác thực", email);
+            return;
+        }
+
+        user.setVerifyToken(UUID.randomUUID().toString());
+        user.setVerifyExpires(LocalDateTime.now().plusHours(24));
+        userRepository.save(user);
+        log.info("Cấp lại verify token cho {}, chuyển sang hàng đợi gửi mail", email);
+        emailService.sendVerificationEmail(user.getEmail(), user.getVerifyToken());
     }
 
     public TokenResponse login(LoginRequest request) {

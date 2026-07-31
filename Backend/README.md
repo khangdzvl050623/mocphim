@@ -271,7 +271,33 @@ axios.interceptors.response.use(
 ```
 
 > Message không thay đổi dù email tồn tại hay không — bảo mật chống dò user.  
-> Email chỉ được gửi nếu tài khoản tồn tại **và đã xác thực**. Link có hiệu lực **15 phút**.
+> Email được gửi cho **mọi tài khoản tồn tại**, kể cả chưa xác thực email. Link có
+> hiệu lực **15 phút**.
+
+> **Đặt lại mật khẩu thành công thì tài khoản được đánh dấu đã xác thực luôn.**
+> Link reset gửi tới chính hộp thư đó, bấm được nghĩa là sở hữu email — đúng bằng
+> chứng mà bước verify đòi hỏi. Trước đây luồng này lọc `isVerified` nên tài khoản
+> chưa xác thực bị bỏ qua im lặng, mà login lại không chặn nhóm đó, dẫn tới tình
+> huống người dùng dùng web bình thường nhưng không bao giờ nhận được mail reset.
+
+### POST `/auth/resend-verification` — Gửi lại mail xác thực
+
+**Request:**
+```json
+{ "email": "user@example.com" }
+```
+
+**Response `200` (luôn trả về cùng message):**
+```json
+{
+  "status": true,
+  "message": "Nếu tài khoản chưa xác thực, email hướng dẫn đã được gửi lại."
+}
+```
+
+> Dành cho người đăng ký xong không bấm link xác thực. Họ vẫn đăng nhập bình thường
+> (login không kiểm tra `isVerified`) nên không có gì nhắc — frontend hiển thị banner
+> dựa trên `isVerified` trong `/auth/me` và gọi endpoint này.
 
 **Luồng đầy đủ cho FE:**
 
