@@ -1,14 +1,16 @@
 package mocphim.com.backend_web.service;
 
-import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailAuthenticationException;
+import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @Service
@@ -26,6 +28,16 @@ public class EmailService {
     @Value("${app.mail.from}")
     private String fromEmail;
 
+    // Chỉ dùng để báo cáo cấu hình khi chẩn đoán — không tham gia việc gửi.
+    @Value("${spring.mail.host}")
+    private String mailHost;
+
+    @Value("${spring.mail.port}")
+    private String mailPort;
+
+    @Value("${spring.mail.username}")
+    private String mailUsername;
+
     @Async
     public void sendVerificationEmail(String toEmail, String token) {
         String link = appUrl + "/auth/verify-email?token=" + token;
@@ -38,7 +50,44 @@ public class EmailService {
         sendHtmlEmail(toEmail, "Đặt lại mật khẩu MocPhim", buildResetHtml(link));
     }
 
-    private void sendHtmlEmail(String toEmail, String subject, String html) {
+    /**
+     * Gửi mail thử để kiểm chứng cấu hình SMTP. Cố ý KHÔNG @Async và không nuốt lỗi:
+     * người gọi cần biết ngay Brevo có nhận hay không, thay vì phải mò log.
+     */
+    public void sendTestEmail(String toEmail) {
+        String html = """
+                <p>Đây là email kiểm tra cấu hình SMTP của <strong>MocPhim</strong>.</p>
+                <p>Nhận được email này nghĩa là backend gửi mail thành công.</p>
+                <p style="color:#888;font-size:13px">Cấu hình đang dùng: %s</p>
+                """.formatted(describeConfig());
+        sendHtmlEmailOrThrow(toEmail, "Test cấu hình email MocPhim", html);
+    }
+
+    /** Tóm tắt cấu hình đang chạy — không bao giờ chứa mật khẩu / SMTP key. */
+    public String describeConfig() {
+        return "host=%s, port=%s, username=%s, from=%s, appUrl=%s, frontendUrl=%s".formatted(
+                orUnset(mailHost), orUnset(mailPort), orUnset(mailUsername),
+                orUnset(fromEmail), orUnset(appUrl), orUnset(frontendUrl));
+    }
+
+    private String orUnset(String value) {
+        return StringUtils.hasText(value) ? value : "(CHƯA SET)";
+    }
+
+    /**
+     * Gửi mail và NÉM lỗi ra ngoài. Dùng cho chỗ nào muốn biết kết quả thật —
+     * cụ thể là endpoint test của admin.
+     *
+     * Tách khỏi {@link #sendHtmlEmail} vì hai chỗ gọi có nhu cầu trái ngược: luồng
+     * đăng ký / quên mật khẩu chạy @Async nên không ai bắt được exception, còn
+     * người đang chẩn đoán cấu hình SMTP thì cần đúng cái exception đó.
+     */
+    public void sendHtmlEmailOrThrow(String toEmail, String subject, String html) {
+        if (!StringUtils.hasText(fromEmail)) {
+            throw new IllegalStateException(
+                    "Chưa cấu hình biến môi trường MAIL_FROM. Giá trị phải là địa chỉ đã Verified "
+                            + "trong Brevo (Senders, domains & IPs), không phải SMTP login.");
+        }
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -47,9 +96,65 @@ public class EmailService {
             helper.setSubject(subject);
             helper.setText(html, true);
             mailSender.send(message);
-            log.info("Email gửi thành công đến: {}", toEmail);
+            log.info("Email gửi thành công đến {} (from={})", toEmail, fromEmail);
         } catch (Exception e) {
-            log.error("Lỗi gửi email đến {}: {}", toEmail, e.getMessage());
+            throw new MailDeliveryException(diagnose(e), e);
+        }
+    }
+
+    /**
+     * Gửi mail "best effort": log lỗi rồi nuốt. Đúng cho luồng @Async, vì exception
+     * ném từ thread khác không tới được người dùng, mà chặn đăng ký chỉ vì gửi mail
+     * hỏng thì càng tệ.
+     */
+    private void sendHtmlEmail(String toEmail, String subject, String html) {
+        try {
+            sendHtmlEmailOrThrow(toEmail, subject, html);
+        } catch (Exception e) {
+            // Log kèm stacktrace: trước đây chỉ in getMessage() nên mất sạch mã lỗi
+            // SMTP, không phân biệt nổi sai key với bị chặn port.
+            log.error("KHÔNG gửi được email đến {}: {}", toEmail, diagnose(e), e);
+        }
+    }
+
+    /**
+     * Dịch exception của JavaMail sang nguyên nhân cấu hình cụ thể, để nhìn log là
+     * biết phải sửa gì thay vì đoán.
+     */
+    private String diagnose(Exception e) {
+        if (e instanceof MailAuthenticationException) {
+            return "SMTP từ chối đăng nhập — kiểm tra MAIL_USERNAME (phải là SMTP login dạng "
+                    + "xxxxxx@smtp-brevo.com) và MAIL_PASSWORD (phải là SMTP key, không phải mật khẩu tài khoản)";
+        }
+        String detail = rootMessage(e);
+        if (e instanceof MailSendException) {
+            String lower = detail.toLowerCase();
+            if (lower.contains("timed out") || lower.contains("timeout")
+                    || lower.contains("connect") || lower.contains("network is unreachable")) {
+                return "Không mở được kết nối tới SMTP server — nhiều khả năng nhà cung cấp hosting "
+                        + "chặn port SMTP outbound. Cân nhắc chuyển sang gửi mail qua HTTP API. Chi tiết: " + detail;
+            }
+            if (lower.contains("sender") || lower.contains("not authorized") || lower.contains("unauthorized")) {
+                return "SMTP server từ chối địa chỉ gửi — MAIL_FROM phải là sender đã Verified. Chi tiết: " + detail;
+            }
+        }
+        return detail;
+    }
+
+    private String rootMessage(Throwable e) {
+        Throwable current = e;
+        while (current.getCause() != null && current.getCause() != current) {
+            current = current.getCause();
+        }
+        String message = current.getMessage();
+        return StringUtils.hasText(message) ? current.getClass().getSimpleName() + ": " + message
+                : current.getClass().getSimpleName();
+    }
+
+    /** Bọc lỗi gửi mail để controller phân biệt được với lỗi nghiệp vụ khác. */
+    public static class MailDeliveryException extends RuntimeException {
+        public MailDeliveryException(String message, Throwable cause) {
+            super(message, cause);
         }
     }
 
