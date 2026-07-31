@@ -55,6 +55,18 @@ public class AuthController {
         }
     }
 
+    /**
+     * Gửi lại mail xác thực. Trả cùng một message cho mọi trường hợp (email không tồn
+     * tại / đã xác thực / vừa gửi xong) để không thành công cụ dò email đã đăng ký.
+     */
+    @PostMapping("/resend-verification")
+    public ResponseEntity<ApiResponse<String>> resendVerification(
+            @Valid @RequestBody ForgotPasswordRequest request) {
+        authService.resendVerification(request.getEmail());
+        return ResponseEntity.ok(ApiResponse.success(
+                "Nếu tài khoản chưa xác thực, email hướng dẫn đã được gửi lại."));
+    }
+
     @PostMapping("/forgot-password")
     public ResponseEntity<ApiResponse<String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         authService.forgotPassword(request.getEmail());

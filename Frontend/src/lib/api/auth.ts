@@ -25,6 +25,11 @@ export interface AuthUser {
   avatar: string | null;
   provider: string;
   roles: string[];
+  /**
+   * Backend gắn @JsonProperty("isVerified") lên getter để trả đúng key này — mặc định
+   * Lombok + Jackson sẽ rút thành `verified`. Đừng đổi tên ở đây mà không sửa cả bên đó.
+   */
+  isVerified: boolean;
 }
 
 const url = (endpoint: string) => `${AUTH_BASE_URL}${endpoint}`;
@@ -95,6 +100,15 @@ export async function apiLogout(accessToken?: string): Promise<void> {
 
 export async function apiForgotPassword(email: string): Promise<void> {
   await requestJson<null>(url("/auth/forgot-password"), jsonPost({ email }));
+}
+
+/** Gửi lại mail xác thực. Trả về message của server để hiển thị nguyên văn. */
+export async function apiResendVerification(email: string): Promise<string> {
+  const envelope = await requestJson<null>(
+    url("/auth/resend-verification"),
+    jsonPost({ email }),
+  );
+  return envelope.message;
 }
 
 export async function apiResetPassword(
