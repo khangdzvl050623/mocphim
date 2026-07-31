@@ -75,6 +75,12 @@ public class BrevoApiMailTransport implements MailTransport {
             case 400 -> "Brevo từ chối nội dung gửi — thường là sender chưa Verified trong "
                     + "Senders, domains & IPs. Chi tiết: " + detail;
             case 402 -> "Hết quota gửi của tài khoản Brevo. Chi tiết: " + detail;
+            // Không phải lỗi cấu hình: key đúng, request đúng, nhưng Brevo chưa cho tài
+            // khoản quyền gửi. Phải xin kích hoạt trong dashboard hoặc qua contact@brevo.com,
+            // code không làm gì được. Tách riêng để khỏi mất thời gian dò lại cấu hình.
+            case 403 -> "Brevo chưa kích hoạt quyền gửi cho tài khoản này — KHÔNG phải lỗi cấu hình. "
+                    + "Vào dashboard Brevo xin kích hoạt (hoặc liên hệ contact@brevo.com); "
+                    + "trong lúc chờ có thể đổi sang nhà cung cấp khác. Chi tiết: " + detail;
             default -> "Brevo API trả HTTP " + status + ". Chi tiết: " + detail;
         };
     }

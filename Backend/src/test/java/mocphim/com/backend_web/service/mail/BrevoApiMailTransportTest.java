@@ -91,6 +91,22 @@ class BrevoApiMailTransportTest {
     }
 
     @Test
+    void loi403_noiRoLaTaiKhoanChuaDuocKichHoat() {
+        server.expect(requestTo(ENDPOINT))
+                .andRespond(withStatus(HttpStatus.FORBIDDEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"message\":\"Unable to send email. Your SMTP account is not yet "
+                                + "activated.\",\"code\":\"permission_denied\"}"));
+
+        // Dễ bị hiểu nhầm thành sai cấu hình rồi dò lại key/sender mất thời gian, trong
+        // khi thực tế phải xin Brevo mở quyền gửi.
+        assertThatThrownBy(() -> transport.send("a@b.com", "c@d.com", "s", "<p>h</p>"))
+                .isInstanceOf(MailDeliveryException.class)
+                .hasMessageContaining("chưa kích hoạt")
+                .hasMessageContaining("KHÔNG phải lỗi cấu hình");
+    }
+
+    @Test
     void describe_khongLoApiKey() {
         assertThat(transport.describe())
                 .contains("brevo-api")
