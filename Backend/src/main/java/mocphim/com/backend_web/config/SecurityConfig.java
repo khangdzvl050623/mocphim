@@ -73,6 +73,9 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/auth/register", "/auth/login", "/auth/refresh", "/auth/logout",
                                 "/auth/verify-email", "/auth/forgot-password", "/auth/reset-password",
+                                // Đổi mã handoff lấy token: người gọi chưa có token nên phải public.
+                                // Bản thân mã đã là bằng chứng xác thực (một lần, sống 60 giây).
+                                "/auth/oauth2/exchange",
                                 "/oauth2/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/countries/**").permitAll()

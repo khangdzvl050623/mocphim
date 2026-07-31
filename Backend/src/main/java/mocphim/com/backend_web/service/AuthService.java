@@ -1,6 +1,7 @@
 package mocphim.com.backend_web.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import mocphim.com.backend_web.dto.request.LoginRequest;
 import mocphim.com.backend_web.dto.request.RegisterRequest;
 import mocphim.com.backend_web.dto.response.TokenResponse;
@@ -24,10 +25,12 @@ import org.springframework.web.client.RestTemplate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -38,6 +41,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final RestTemplate restTemplate;
     private final EmailService emailService;
+    private final OAuth2HandoffService oAuth2HandoffService;
 
     @Value("${app.jwt.access-expiration}")
     private long accessExpiration;
@@ -91,12 +95,24 @@ public class AuthService {
     }
 
     public void forgotPassword(String email) {
-        userRepository.findByEmailAndIsVerifiedTrue(email).ifPresent(user -> {
-            user.setResetToken(UUID.randomUUID().toString());
-            user.setResetExpires(LocalDateTime.now().plusMinutes(15));
-            userRepository.save(user);
-            emailService.sendResetPasswordEmail(user.getEmail(), user.getResetToken());
-        });
+        Optional<User> target = userRepository.findByEmailAndIsVerifiedTrue(email);
+        if (target.isEmpty()) {
+            // Response vẫn giữ message chung để không lộ email nào có thật trong hệ thống,
+            // nhưng phải log lại: trước đây `ifPresent` im lặng khiến trường hợp tài khoản
+            // kẹt is_verified=false trông y hệt trường hợp SMTP hỏng.
+            boolean exists = userRepository.findByEmail(email).isPresent();
+            log.warn("Bỏ qua yêu cầu quên mật khẩu cho {} — {}", email,
+                    exists ? "tài khoản tồn tại nhưng chưa xác thực email (is_verified=false)"
+                            : "email không tồn tại");
+            return;
+        }
+
+        User user = target.get();
+        user.setResetToken(UUID.randomUUID().toString());
+        user.setResetExpires(LocalDateTime.now().plusMinutes(15));
+        userRepository.save(user);
+        log.info("Đã tạo reset token cho {}, chuyển sang hàng đợi gửi mail", email);
+        emailService.sendResetPasswordEmail(user.getEmail(), user.getResetToken());
     }
 
     public void resetPassword(String token, String newPassword) {
@@ -137,6 +153,24 @@ public class AuthService {
                 .tokenType("Bearer")
                 .expiresIn(accessExpiration)
                 .build();
+    }
+
+    /**
+     * Đổi mã handoff (do OAuth2SuccessHandler phát) lấy cặp token thật.
+     *
+     * Mã chỉ dùng được một lần và sống 60 giây, nên tới đây coi như đã xác thực xong —
+     * việc còn lại chỉ là kiểm tra tài khoản có còn hiệu lực không, giống hệt luồng
+     * refresh: mã có thể được phát ra ngay trước khi admin khoá tài khoản.
+     */
+    public TokenResponse exchangeOAuth2Code(String code) {
+        Long userId = oAuth2HandoffService.consume(code);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User không tồn tại"));
+        if (!user.isEnabled()) {
+            throw new DisabledException("Tài khoản đã bị vô hiệu hoá");
+        }
+        log.info("Đổi mã OAuth2 thành công cho user id={}", userId);
+        return buildTokenResponse(user);
     }
 
     @SuppressWarnings("unchecked")
