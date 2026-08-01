@@ -23,6 +23,20 @@ const TABS = [
   { id: 'suggestion', label: 'Đề xuất' },
 ];
 
+/**
+ * Quyền cấp cho iframe của nguồn phát.
+ *
+ * Trình duyệt di động siết chặt hơn desktop: iframe khác origin không được cấp
+ * `autoplay` và `encrypted-media` thì player bên trong không phát được, trong khi
+ * trên desktop vẫn chạy — đúng kiểu lỗi "máy tính xem được, điện thoại thì không".
+ * Trang /xem-phim đã cấp đủ từ trước, chỉ trang này bị bỏ sót.
+ */
+const PLAYER_IFRAME_PERMISSIONS = {
+  allow: 'autoplay; encrypted-media; picture-in-picture; fullscreen',
+  allowFullScreen: true,
+  referrerPolicy: 'strict-origin-when-cross-origin',
+} as const;
+
 export const MovieMainContent = ({ movie, images, keywords, initialTap, initialSv }: HeroProps) => {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('episodes');
@@ -80,7 +94,7 @@ export const MovieMainContent = ({ movie, images, keywords, initialTap, initialS
               <div className="w-full aspect-video rounded-xl overflow-hidden bg-black mb-8">
                 <iframe
                   src={trailerEmbedSrc}
-                  allowFullScreen
+                  {...PLAYER_IFRAME_PERMISSIONS}
                   className="w-full h-full border-0"
                   title={`${movie.name} - Trailer`}
                 />
@@ -89,7 +103,7 @@ export const MovieMainContent = ({ movie, images, keywords, initialTap, initialS
               <div className="w-full aspect-video rounded-xl overflow-hidden bg-black mb-8">
                 <iframe
                   src={currentEmbedSrc}
-                  allowFullScreen
+                  {...PLAYER_IFRAME_PERMISSIONS}
                   className="w-full h-full border-0"
                   title={`${movie.name} - Tập ${currentEp.name}`}
                 />
@@ -98,7 +112,7 @@ export const MovieMainContent = ({ movie, images, keywords, initialTap, initialS
               <div className="w-full aspect-video rounded-xl overflow-hidden bg-black mb-8">
                 <iframe
                   src={trailerEmbedSrc}
-                  allowFullScreen
+                  {...PLAYER_IFRAME_PERMISSIONS}
                   className="w-full h-full border-0"
                   title={`${movie.name} - Trailer`}
                 />
