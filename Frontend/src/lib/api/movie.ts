@@ -7,10 +7,21 @@ function resolveTotalPages(totalPages: number, totalItems: number, pageSize: num
   return totalPages;
 }
 
+/** Thư mục ảnh trên CDN. Một số bản ghi trong DB đã kèm sẵn tiền tố này. */
+const CDN_MOVIE_PATH = 'uploads/movies';
+
 export function getMovieThumb(thumb_url: string, cdn = CDN): string {
   if (!thumb_url) return '';
   if (thumb_url.startsWith('http')) return thumb_url;
-  return `${cdn}/uploads/movies/${thumb_url}`;
+
+  // Dữ liệu sync về không đồng nhất: đa số là tên file trần (`abc-thumb.jpg`) nhưng
+  // có bản ghi kèm sẵn `uploads/movies/`. Ghép thẳng thì thành
+  // `.../uploads/movies/uploads/movies/abc-thumb.webp` và CDN trả 404.
+  const path = thumb_url
+    .replace(/^\/+/, '')
+    .replace(new RegExp(`^${CDN_MOVIE_PATH}/`), '');
+
+  return `${cdn}/${CDN_MOVIE_PATH}/${path}`;
 }
 
 // ─── Movie Detail Types ────────────────────────────────────────────────────────
