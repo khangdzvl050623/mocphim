@@ -1,3 +1,5 @@
+import { buildCdnImageUrl } from '@/lib/api/image';
+
 export interface ApiMovie {
   _id: string;
   name: string;
@@ -35,9 +37,7 @@ const CDN_IMAGE = process.env.NEXT_PUBLIC_CDN_IMAGE!;
 const DOMAIN_FRONTEND = process.env.NEXT_PUBLIC_DOMAIN_FRONTEND!;
 
 export function getThumbUrl(thumb_url: string, cdn?: string): string {
-  if (!thumb_url) return '';
-  if (thumb_url.startsWith('http')) return thumb_url;
-  return `${cdn || CDN_IMAGE}/uploads/movies/${thumb_url}`;
+  return buildCdnImageUrl(thumb_url, cdn || CDN_IMAGE);
 }
 
 /**

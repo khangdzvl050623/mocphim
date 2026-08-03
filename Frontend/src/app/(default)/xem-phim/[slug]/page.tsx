@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import WatchMovieTemplate from '@/app/(default)/xem-phim/[slug]/index';
 import { fetchMovieDetail, fetchMovieList, fetchMoviePeoples, type PeoplesData } from '@/lib/api/movie';
+import { buildCdnImageUrl } from '@/lib/api/image';
 import { notFound } from 'next/navigation';
 
 export async function generateMetadata({
@@ -14,9 +15,7 @@ export async function generateMetadata({
   const { item, cdnImage } = data;
   const title = `Phim ${item.name} (${item.origin_name}) - MocPhim`;
   const description = item.content?.replace(/<[^>]*>/g, '').slice(0, 160) ?? `Xem phim ${item.name} vietsub HD miễn phí tại MocPhim.`;
-  const image = item.thumb_url?.startsWith('http')
-    ? item.thumb_url
-    : `${cdnImage}/uploads/movies/${item.thumb_url}`;
+  const image = buildCdnImageUrl(item.thumb_url, cdnImage);
   return {
     title,
     description,

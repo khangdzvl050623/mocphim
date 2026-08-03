@@ -1,3 +1,5 @@
+import { buildCdnImageUrl } from '@/lib/api/image';
+
 const API = process.env.NEXT_PUBLIC_API_URL!;
 const CDN = process.env.NEXT_PUBLIC_CDN_IMAGE!;
 
@@ -8,9 +10,7 @@ function resolveTotalPages(totalPages: number, totalItems: number, pageSize: num
 }
 
 export function getActorThumb(thumb_url: string, cdn = CDN): string {
-  if (!thumb_url) return '';
-  if (thumb_url.startsWith('http')) return thumb_url;
-  return `${cdn}/uploads/movies/${thumb_url}`;
+  return buildCdnImageUrl(thumb_url, cdn);
 }
 
 // ─── Types ─────────────────────────────────────────────────────────────────────

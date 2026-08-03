@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
+import { buildCdnImageUrl } from "@/lib/api/image";
 import images from "@/assets/images";
 import { fetchSyncMovies, type MovieSyncItem } from "@/lib/api/sync";
 import MoviePoster from "@/components/MoviePoster";
@@ -16,11 +17,7 @@ const CARD_BADGE_BG = { episode: "#5e6070", quality: "#2ca35d" } as const;
 
 // ─── MovieCard ────────────────────────────────────────────────────────────────
 function MovieCard({ item, priority = false }: { item: MovieSyncItem; priority?: boolean }) {
-  const thumb = item.thumbUrl
-    ? item.thumbUrl.startsWith("http")
-      ? item.thumbUrl
-      : `${CDN}/uploads/movies/${item.thumbUrl}`
-    : `${CDN}/uploads/movies/${item.slug}-thumb.jpg`;
+  const thumb = buildCdnImageUrl(item.thumbUrl || `${item.slug}-thumb.jpg`, CDN);
 
   return (
     <div className="group w-full">

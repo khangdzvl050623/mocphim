@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { buildCdnImageUrl } from '@/lib/api/image';
 import MovieDetailTemplate from './index';
 import {
   fetchMovieDetail,
@@ -20,9 +21,7 @@ export async function generateMetadata({
   const { item, cdnImage } = data;
   const title = `${item.name} (${item.origin_name}) - MocPhim`;
   const description = item.content?.replace(/<[^>]*>/g, '').slice(0, 160) ?? `Xem phim ${item.name} vietsub HD miễn phí tại MocPhim.`;
-  const image = item.thumb_url?.startsWith('http')
-    ? item.thumb_url
-    : `${cdnImage}/uploads/movies/${item.thumb_url}`;
+  const image = buildCdnImageUrl(item.thumb_url, cdnImage);
   return {
     title,
     description,
