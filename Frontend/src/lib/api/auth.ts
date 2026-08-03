@@ -87,11 +87,23 @@ export async function apiGetMe(accessToken: string): Promise<AuthUser> {
   });
 }
 
-export async function apiLogout(accessToken?: string): Promise<void> {
+/**
+ * Gửi kèm refresh token để server thu hồi nó.
+ *
+ * Không gửi thì token vẫn đổi được token mới cho tới khi hết hạn 7 ngày, dù người
+ * dùng đã bấm đăng xuất — xoá ở client không làm nó mất hiệu lực phía server.
+ */
+export async function apiLogout(
+  accessToken?: string,
+  refreshToken?: string,
+): Promise<void> {
   try {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
     await fetch(url("/auth/logout"), {
       method: "POST",
-      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      headers,
+      body: JSON.stringify({ refreshToken: refreshToken ?? "" }),
     });
   } catch {
     // ignore — tokens will be cleared client-side regardless

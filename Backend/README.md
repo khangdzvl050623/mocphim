@@ -216,19 +216,52 @@ Gọi khi nhận lỗi `401` từ bất kỳ API nào.
   "status": true,
   "data": {
     "accessToken": "eyJ...(mới)",
-    "refreshToken": "eyJ...(cũ giữ nguyên)",
+    "refreshToken": "eyJ...(MỚI — token cũ đã bị thu hồi)",
     "tokenType": "Bearer",
     "expiresIn": 1800000
   }
 }
 ```
 
+> ⚠️ **Refresh token được xoay mỗi lần gọi (rotation).** Client BẮT BUỘC phải lưu
+> `refreshToken` mới trong response — token vừa gửi lên đã chết ngay sau lệnh gọi này.
+> Chỉ lưu `accessToken` như ví dụ Axios bên dưới thì lần refresh kế tiếp sẽ thất bại.
+
 **Response lỗi `400`:**
 ```json
 { "status": false, "message": "Refresh token không hợp lệ" }
 ```
+```json
+{ "status": false, "message": "Phiên đăng nhập không còn hợp lệ, vui lòng đăng nhập lại" }
+```
 
 > Nếu refresh token cũng hết hạn → xóa token, redirect về `/login`.
+
+### Rotation và phát hiện token bị đánh cắp
+
+Mỗi refresh token mang một `jti`, và chỉ những `jti` còn trong Redis mới đổi được token
+mới. Đổi xong thì `jti` đó chết.
+
+| Tình huống | Phản hồi |
+|---|---|
+| `jti` còn sống | Phát cặp token mới, thu hồi token cũ |
+| `jti` đã dùng, **trong 30 giây** | Trả lại token thay thế (xem lý do bên dưới) |
+| `jti` đã dùng, **quá 30 giây** | Coi là bị đánh cắp → **thu hồi toàn bộ** refresh token của user |
+| Token bản cũ (không có `jti`) | Từ chối, buộc đăng nhập lại một lần |
+
+**Vì sao cần 30 giây ân hạn:** người dùng mở nhiều tab, tab A refresh trước và xoay
+token, tab B vẫn cầm token cũ. Không có ân hạn thì tab B bị coi là kẻ trộm và cả hai
+tab cùng bị đăng xuất — lỗi kinh điển khi mới làm rotation.
+
+**Khi Redis không truy cập được**, endpoint trả `500` chứ không phải `400`. Khác biệt này
+quan trọng: client phải hiểu đây là sự cố hạ tầng và **giữ nguyên phiên đăng nhập** rồi
+thử lại, thay vì xoá token như khi bị từ chối thật sự.
+
+### POST `/auth/logout` — gửi kèm refresh token
+
+Body `{ "refreshToken": "..." }` để server thu hồi. Không gửi thì token vẫn đổi được
+token mới cho tới khi hết hạn 7 ngày, dù người dùng đã đăng xuất — xoá ở client không
+làm token mất hiệu lực phía server.
 
 **Ví dụ auto-refresh với Axios:**
 ```javascript

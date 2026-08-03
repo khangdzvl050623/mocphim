@@ -109,8 +109,18 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(user));
     }
 
+    /**
+     * Thu hồi refresh token nếu client gửi kèm.
+     *
+     * Body là tuỳ chọn để không phá client cũ vốn gọi logout với body rỗng — nhưng
+     * không gửi thì refresh token vẫn sống tới khi hết hạn, dù người dùng đã đăng xuất.
+     */
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> logout() {
+    public ResponseEntity<ApiResponse<Void>> logout(
+            @RequestBody(required = false) Map<String, String> body) {
+        if (body != null) {
+            authService.logout(body.get("refreshToken"));
+        }
         return ResponseEntity.ok(ApiResponse.success("Đăng xuất thành công"));
     }
 }

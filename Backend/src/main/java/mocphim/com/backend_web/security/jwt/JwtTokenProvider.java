@@ -41,14 +41,31 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    public String generateRefreshToken(User user) {
+    /**
+     * Phát refresh token mang theo định danh {@code jti}.
+     *
+     * Chữ ký JWT chỉ chứng minh token do server phát, không cho biết token còn hiệu
+     * lực hay đã bị xoay. Cần một khoá để tra trạng thái ở nơi khác — đó là vai trò
+     * của jti; bản thân RefreshTokenStore giữ danh sách jti nào còn dùng được.
+     */
+    public String generateRefreshToken(User user, String jti) {
         Date now = new Date();
         return Jwts.builder()
+                .id(jti)
                 .subject(String.valueOf(user.getId()))
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + refreshExpiration))
                 .signWith(secretKey)
                 .compact();
+    }
+
+    /** Trả null nếu token do bản cũ phát (chưa có jti) — người gọi tự quyết cách xử lý. */
+    public String getJtiFromToken(String token) {
+        return getClaims(token).getId();
+    }
+
+    public long getRefreshExpirationMs() {
+        return refreshExpiration;
     }
 
     public boolean validateToken(String token) {

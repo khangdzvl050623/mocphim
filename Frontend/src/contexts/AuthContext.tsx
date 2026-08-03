@@ -246,7 +246,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     const token = localStorage.getItem(ACCESS_TOKEN_KEY) ?? undefined;
-    void apiLogout(token);
+    // Đọc refresh token TRƯỚC khi clearTokens: server cần nó để thu hồi, xoá ở
+    // client không làm token mất hiệu lực phía server.
+    const refresh = localStorage.getItem(REFRESH_TOKEN_KEY) ?? undefined;
+    void apiLogout(token, refresh);
     clearTokens();
     setUser(null);
   }, []);

@@ -42,6 +42,7 @@ public class AuthService {
     private final RestTemplate restTemplate;
     private final EmailService emailService;
     private final OAuth2HandoffService oAuth2HandoffService;
+    private final RefreshTokenStore refreshTokenStore;
 
     @Value("${app.jwt.access-expiration}")
     private long accessExpiration;
@@ -177,25 +178,86 @@ public class AuthService {
         return buildTokenResponse(userDetails.getUser());
     }
 
+    /**
+     * Đổi refresh token lấy cặp token mới, xoay luôn refresh token (rotation).
+     *
+     * Mỗi refresh token chỉ dùng được một lần. Dùng xong nó chết, người dùng nhận
+     * refresh token mới. Nhờ vậy một token bị đánh cắp chỉ sống tới lần refresh kế
+     * tiếp, thay vì dùng thoải mái trong 7 ngày như trước.
+     *
+     * Kèm phát hiện tái sử dụng: nếu ai đó trình một token đã bị xoay (chữ ký vẫn
+     * hợp lệ nhưng jti không còn trong store), nghĩa là có hai bên cùng cầm một
+     * token — không biết bên nào là chủ thật, nên thu hồi cả chuỗi và bắt đăng nhập lại.
+     */
     public TokenResponse refreshToken(String refreshToken) {
         if (!jwtTokenProvider.validateToken(refreshToken)) {
             throw new IllegalArgumentException("Refresh token không hợp lệ");
         }
+
         Long userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
-        User user = userRepository.findById(userId)
+        String jti = jwtTokenProvider.getJtiFromToken(refreshToken);
+
+        // Token do bản cũ phát chưa có jti. Từ chối thay vì cho qua: chấp nhận token
+        // không theo dõi được thì kẻ tấn công chỉ cần dùng token cũ là vô hiệu hoá
+        // toàn bộ cơ chế này. Người dùng đăng nhập lại một lần sau khi deploy.
+        if (!StringUtils.hasText(jti)) {
+            throw new IllegalArgumentException("Phiên đăng nhập đã cũ, vui lòng đăng nhập lại");
+        }
+
+        Long ownerId = refreshTokenStore.consume(jti);
+        if (ownerId == null) {
+            return handleConsumedToken(jti, userId);
+        }
+
+        User user = userRepository.findById(ownerId)
                 .orElseThrow(() -> new IllegalArgumentException("User không tồn tại"));
-        // Refresh token là JWT stateless, không lưu DB nên không revoke được. Không
-        // chặn ở đây thì tài khoản bị khoá vẫn tự cấp access token mới cho tới khi
-        // refresh token hết hạn.
+        // Refresh token không mang trạng thái tài khoản, nên phải kiểm tra lại ở đây:
+        // không chặn thì tài khoản vừa bị khoá vẫn tự cấp access token mới.
         if (!user.isEnabled()) {
+            refreshTokenStore.revokeAll(ownerId);
             throw new DisabledException("Tài khoản đã bị vô hiệu hoá");
         }
-        return TokenResponse.builder()
-                .accessToken(jwtTokenProvider.generateAccessToken(user))
-                .refreshToken(refreshToken)
-                .tokenType("Bearer")
-                .expiresIn(accessExpiration)
-                .build();
+
+        TokenResponse tokens = buildTokenResponse(user);
+        // Giữ lại token thay thế trong ít giây, phòng khi một tab khác đang refresh
+        // song song với cùng token cũ — xem RefreshTokenStore.KEY_GRACE.
+        refreshTokenStore.rememberReplacement(jti, tokens.getRefreshToken());
+        return tokens;
+    }
+
+    /**
+     * Xử lý token có chữ ký hợp lệ nhưng jti không còn trong store.
+     *
+     * Hai khả năng rất khác nhau: người dùng mở nhiều tab và tab thứ hai chạy chậm
+     * vài giây, hay token đã bị đánh cắp. Phân biệt bằng thời gian ân hạn.
+     */
+    private TokenResponse handleConsumedToken(String jti, Long userId) {
+        String replacement = refreshTokenStore.findReplacement(jti);
+        if (replacement != null) {
+            // Còn trong thời gian ân hạn: trả lại đúng token đã phát cho lần xoay
+            // trước, để tab chậm chân không bị đá ra.
+            log.debug("Refresh trùng lặp trong thời gian ân hạn, trả lại token thay thế");
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User không tồn tại"));
+            return TokenResponse.builder()
+                    .accessToken(jwtTokenProvider.generateAccessToken(user))
+                    .refreshToken(replacement)
+                    .tokenType("Bearer")
+                    .expiresIn(accessExpiration)
+                    .build();
+        }
+
+        log.warn("Phát hiện refresh token bị dùng lại (user id={}) — thu hồi toàn bộ phiên", userId);
+        refreshTokenStore.revokeAll(userId);
+        throw new IllegalArgumentException("Phiên đăng nhập không còn hợp lệ, vui lòng đăng nhập lại");
+    }
+
+    /** Thu hồi refresh token khi đăng xuất, thay vì để nó sống tiếp tới khi hết hạn. */
+    public void logout(String refreshToken) {
+        if (!StringUtils.hasText(refreshToken) || !jwtTokenProvider.validateToken(refreshToken)) {
+            return;
+        }
+        refreshTokenStore.revoke(jwtTokenProvider.getJtiFromToken(refreshToken));
     }
 
     /**
@@ -267,9 +329,12 @@ public class AuthService {
     }
 
     private TokenResponse buildTokenResponse(User user) {
+        // jti được ghi nhận vào store trước khi nhúng vào token: chỉ những jti có mặt
+        // ở đó mới đổi được token mới, đó là toàn bộ cơ sở của cơ chế rotation.
+        String jti = refreshTokenStore.issue(user.getId());
         return TokenResponse.builder()
                 .accessToken(jwtTokenProvider.generateAccessToken(user))
-                .refreshToken(jwtTokenProvider.generateRefreshToken(user))
+                .refreshToken(jwtTokenProvider.generateRefreshToken(user, jti))
                 .tokenType("Bearer")
                 .expiresIn(accessExpiration)
                 .build();
