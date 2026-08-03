@@ -18,8 +18,9 @@ public class YearController {
 
     private final YearService yearService;
 
+    /** Trả thẳng mảng năm: {"status":true,"data":[2027,2026,...]} */
     @GetMapping
-    public ResponseEntity<ApiResponse<Object>> getYears() {
+    public ResponseEntity<ApiResponse<List<Integer>>> getYears() {
         return ResponseEntity.ok(ApiResponse.success(yearService.getYears()));
     }
     @GetMapping("/{year}/movies")

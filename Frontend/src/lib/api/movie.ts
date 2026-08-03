@@ -401,6 +401,10 @@ export async function fetchYears(): Promise<number[]> {
     const res = await fetch(`${API}/years`, { next: { revalidate: 3600 } });
     if (!res.ok) return [];
     const json = await res.json();
+    // Backend dựng danh sách năm từ DB và trả thẳng mảng. Nhánh `data.data.items`
+    // là shape cũ khi còn proxy nguyên response của OPhim — giữ lại để trang không
+    // rỗng trong lúc Vercel và Render deploy lệch nhau.
+    if (Array.isArray(json?.data)) return json.data;
     return json?.data?.data?.items ?? [];
   } catch {
     return [];
